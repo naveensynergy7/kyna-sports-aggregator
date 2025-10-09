@@ -7,6 +7,8 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
+const telegramRoutes = require('./routes/telegram');
+const telegramPageRoutes = require('./routes/telegram-page');
 const { authenticateAdmin } = require('./middleware/auth');
 
 const app = express();
@@ -18,8 +20,9 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-            scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
             imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://cdn.jsdelivr.net"],
         },
     },
 }));
@@ -58,6 +61,8 @@ app.use('/static', express.static(path.join(__dirname, 'public')));
 // Routes
 app.use('/auth', authRoutes);
 app.use('/dashboard', authenticateAdmin, dashboardRoutes);
+app.use('/telegram', telegramPageRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // Home route
 app.get('/', (req, res) => {

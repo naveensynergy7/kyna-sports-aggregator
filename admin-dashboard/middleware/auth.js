@@ -19,6 +19,15 @@ const authenticateAdmin = async (req, res, next) => {
             return res.redirect('/auth/login');
         }
 
+        // Get user data
+        const [users] = await pool.execute('SELECT id, email FROM admin_users WHERE id = ?', [req.session.adminId]);
+        
+        if (users.length === 0) {
+            req.session.destroy();
+            return res.redirect('/auth/login');
+        }
+
+        req.user = users[0];
         req.sessionData = sessions[0];
         next();
     } catch (error) {

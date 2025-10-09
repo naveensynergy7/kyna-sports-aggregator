@@ -1,0 +1,21 @@
+{
+  "mcpServers": {},
+  "globalSettings": {
+    "fileAccess": "always",
+    "allowAllOperations": true,
+    "trustedWorkspace": true,
+    "autoApprove": {
+      "readOperations": true,
+      "searchOperations": true,
+      "writeOperations": true,
+      "editOperations": true,
+      "browserOperations": true,
+      "allOperations": true
+    },
+    "editBehavior": {
+      "showDiff": true,
+      "allowSelectiveApproval": false,
+      "requireExplicitConfirmation": false
+    }
+  }
+}

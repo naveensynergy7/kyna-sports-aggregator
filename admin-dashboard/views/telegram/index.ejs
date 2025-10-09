@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Sports Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            z-index: 1000;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            margin: 0.25rem 0;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border-right: 3px solid white;
+        }
+
+        .nav-link.disabled {
+            color: rgba(255,255,255,0.4);
+            cursor: not-allowed;
+        }
+
+        .nav-link i {
+            margin-right: 0.75rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--dark-color);
+            margin: 0;
+        }
+
+        .session-info {
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1rem 1.5rem;
+            border: none;
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .btn-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-outline-modern {
+            border: 2px solid #667eea;
+            color: #667eea;
+            background: transparent;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-modern:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .alert {
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+        }
+
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .user-info {
+            text-align: center;
+        }
+
+        .user-info small {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="bi bi-speedometer2 me-2"></i>Sports Admin</h3>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="/dashboard" class="nav-link">
+                    <i class="bi bi-speedometer2"></i>
+                    Dashboard
+                </a>
+            </div>
+            <div class="nav-item">
+                <span class="nav-link disabled">
+                    <i class="bi bi-people"></i>
+                    Groups
+                </span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-link disabled">
+                    <i class="bi bi-chat-dots"></i>
+                    Messages
+                </span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-link disabled">
+                    <i class="bi bi-graph-up"></i>
+                    Analytics
+                </span>
+            </div>
+            <div class="nav-item">
+                <a href="/telegram" class="nav-link active">
+                    <i class="bi bi-telegram"></i>
+                    Telegram
+                </a>
+            </div>
+            <div class="nav-item">
+                <span class="nav-link disabled">
+                    <i class="bi bi-gear"></i>
+                    Settings
+                </span>
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <small>Logged in as:</small>
+                <div><strong><%= user.email %></strong></div>
+                <form method="POST" action="/auth/logout" style="margin-top: 1rem;">
+                    <button type="submit" class="logout-btn">
+                        <i class="bi bi-box-arrow-right me-1"></i>Logout
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1 class="page-title">Telegram Management</h1>
+            <div class="session-info">
+                <i class="bi bi-clock me-1"></i>
+                Session expires: <%= new Date(session.expires_at).toLocaleString() %>
+            </div>
+        </div>
+
+        <!-- Telegram API Configuration Section -->
+        <div id="telegram-api-section" class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>Telegram API Configuration
+                </h5>
+                <button type="button" class="btn btn-outline-modern btn-sm" id="edit-credentials-btn" style="display: none;">
+                    <i class="bi bi-pencil me-1"></i>Edit Credentials
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Get your API credentials:</strong> Visit <a href="https://my.telegram.org" target="_blank">my.telegram.org</a> to get your API ID and API Hash.
+                </div>
+                
+                <!-- Credentials Display (when saved) -->
+                <div id="credentials-display" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">API ID</label>
+                                <div class="form-control-plaintext bg-light p-2 rounded">
+                                    <span id="display-api-id"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">API Hash</label>
+                                <div class="form-control-plaintext bg-light p-2 rounded">
+                                    <span id="display-api-hash"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>Credentials saved!</strong> You can now connect to Telegram.
+                    </div>
+                </div>
+                
+                <!-- Credentials Form (when editing) -->
+                <div id="credentials-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="telegram-api-id" class="form-label">API ID</label>
+                                <input type="number" class="form-control" id="telegram-api-id" placeholder="12345678" required>
+                                <div class="form-text">Your Telegram API ID (numeric)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="telegram-api-hash" class="form-label">API Hash</label>
+                                <input type="text" class="form-control" id="telegram-api-hash" placeholder="abcdef1234567890abcdef1234567890" required>
+                                <div class="form-text">Your Telegram API Hash (32 characters)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-modern" id="save-api-credentials-btn">
+                            <i class="bi bi-save me-2"></i>Save API Credentials
+                        </button>
+                        <button type="button" class="btn btn-outline-modern" id="cancel-edit-btn" style="display: none;">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telegram Login Section -->
+        <div id="telegram-login-section" class="card mb-4" style="display: none;">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="bi bi-telegram me-2"></i>Telegram Connection
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="telegram-login-form">
+                    <div class="mb-3">
+                        <label for="telegram-phone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="telegram-phone" placeholder="+1234567890" required>
+                        <div class="form-text">Enter your phone number with country code</div>
+                    </div>
+                    <button type="button" class="btn btn-modern" id="send-otp-btn">
+                        <i class="bi bi-send me-2"></i>Send OTP
+                    </button>
+                </div>
+                
+                <div id="telegram-otp-form" style="display: none;">
+                        <div class="mb-3">
+                            <label for="telegram-otp" class="form-label">Enter OTP Code</label>
+                            <input type="text" class="form-control" id="telegram-otp" placeholder="12345" maxlength="5" required>
+                            <div class="form-text">Enter the 5-digit code sent to your phone</div>
+                        </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-modern" id="verify-otp-btn">
+                            <i class="bi bi-check-circle me-2"></i>Verify OTP
+                        </button>
+                        <button type="button" class="btn btn-outline-modern" id="resend-otp-btn">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Resend OTP
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telegram Status Section -->
+        <div id="telegram-status-section" class="card mb-4" style="display: none;">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>Telegram Connected
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Phone:</strong> <span id="connected-phone"></span></p>
+                        <p><strong>Status:</strong> <span class="badge bg-success">Connected</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Session Expires:</strong> <span id="session-expires"></span></p>
+                        <button type="button" class="btn btn-outline-danger btn-sm" id="disconnect-telegram-btn">
+                            <i class="bi bi-x-circle me-1"></i>Disconnect
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Groups Management Section -->
+        <div id="telegram-groups-section" class="card" style="display: none;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-people me-2"></i>Telegram Groups
+                </h5>
+                <button type="button" class="btn btn-modern btn-sm" id="refresh-groups-btn">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh Groups
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="groups-loading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading groups...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading your Telegram groups...</p>
+                </div>
+                
+                <div id="groups-content" style="display: none;">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="group-search" placeholder="Search groups...">
+                    </div>
+                    
+                    <div class="row" id="groups-list">
+                        <!-- Groups will be loaded here -->
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-modern" id="save-selected-groups-btn">
+                            <i class="bi bi-save me-2"></i>Save Selected Groups
+                        </button>
+                        <span class="ms-3 text-muted">
+                            <span id="selected-count">0</span> groups selected
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Test script execution
+        console.log('Script is executing...');
+        
+        // Telegram functionality
+        let telegramSession = null;
+        let selectedGroups = new Set();
+
+        // Check Telegram session status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
+            
+            // Test basic functionality first
+            console.log('Testing basic DOM access...');
+            const testElement = document.getElementById('save-api-credentials-btn');
+            console.log('Test element found:', testElement);
+            
+            if (testElement) {
+                console.log('Element exists, adding direct click handler...');
+                testElement.onclick = function() {
+                    console.log('DIRECT CLICK HANDLER WORKING!');
+                    alert('Button clicked successfully!');
+                };
+            }
+            
+            
+            // Edit credentials button
+            const editBtn = document.getElementById('edit-credentials-btn');
+            if (editBtn) {
+                editBtn.onclick = function() {
+                    console.log('Edit credentials clicked');
+                    // Load current credentials and show edit form
+                    loadCurrentCredentialsForEdit();
+                };
+            }
+            
+            // Cancel edit button
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            if (cancelBtn) {
+                cancelBtn.onclick = function() {
+                    console.log('Cancel edit clicked');
+                    // Go back to display mode
+                    loadApiCredentials();
+                };
+            }
+            
+            // Initialize everything
+            initializeTelegram();
+        });
+
+        // Initialize Telegram functionality
+        function initializeTelegram() {
+            console.log('Initializing Telegram functionality...');
+            
+            // Check if save button exists
+            const saveBtn = document.getElementById('save-api-credentials-btn');
+            console.log('Save button found:', saveBtn);
+            
+            if (saveBtn) {
+                // Add the click handler with a more explicit function
+                saveBtn.addEventListener('click', function(event) {
+                    console.log('Save button clicked via event listener!');
+                    event.preventDefault();
+                    handleSaveCredentials();
+                });
+                console.log('Save button event listener added successfully');
+                
+                // Test if button is clickable
+                console.log('Button disabled?', saveBtn.disabled);
+                console.log('Button type:', saveBtn.type);
+            } else {
+                console.error('Save button not found!');
+            }
+            
+            // Initialize other functions
+            checkTelegramSession();
+            loadApiCredentials();
+        }
+
+        // Handle save credentials
+        async function handleSaveCredentials() {
+            console.log('Save button clicked!');
+            const apiId = document.getElementById('telegram-api-id').value;
+            const apiHash = document.getElementById('telegram-api-hash').value;
+            
+            console.log('API ID:', apiId, 'API Hash:', apiHash);
+            
+            if (!apiId || !apiHash) {
+                showAlert('Please enter both API ID and API Hash', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/telegram/save-api-credentials', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ api_id: apiId, api_hash: apiHash })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('API credentials saved successfully!', 'success');
+                    // Show credentials in display mode
+                    showCredentialsDisplay({ api_id: apiId, api_hash: apiHash });
+                    document.getElementById('telegram-login-section').style.display = 'block';
+                } else {
+                    showAlert(data.message || 'Failed to save API credentials', 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving API credentials:', error);
+                showAlert('Error saving API credentials', 'danger');
+            }
+        }
+
+        // Check if user has active Telegram session
+        async function checkTelegramSession() {
+            try {
+                const response = await fetch('/api/telegram/session-status', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.session) {
+                    telegramSession = data.session;
+                    showTelegramConnected();
+                    loadTelegramGroups();
+                } else {
+                    showTelegramLogin();
+                }
+            } catch (error) {
+                console.error('Error checking Telegram session:', error);
+                showTelegramLogin();
+            }
+        }
+
+        // Load API credentials
+        async function loadApiCredentials() {
+            try {
+                const response = await fetch('/api/telegram/api-credentials', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.success && data.credentials) {
+                    // If credentials exist, show them in display mode
+                    if (data.credentials.api_id && data.credentials.api_hash) {
+                        showCredentialsDisplay(data.credentials);
+                        document.getElementById('telegram-login-section').style.display = 'block';
+                    } else {
+                        showCredentialsForm();
+                    }
+                } else {
+                    showCredentialsForm();
+                }
+            } catch (error) {
+                console.error('Error loading API credentials:', error);
+                showCredentialsForm();
+            }
+        }
+
+        // Show credentials in display mode
+        function showCredentialsDisplay(credentials) {
+            document.getElementById('credentials-display').style.display = 'block';
+            document.getElementById('credentials-form').style.display = 'none';
+            document.getElementById('edit-credentials-btn').style.display = 'inline-block';
+            
+            document.getElementById('display-api-id').textContent = credentials.api_id;
+            document.getElementById('display-api-hash').textContent = credentials.api_hash;
+        }
+
+        // Show credentials in edit mode
+        function showCredentialsForm() {
+            document.getElementById('credentials-display').style.display = 'none';
+            document.getElementById('credentials-form').style.display = 'block';
+            document.getElementById('edit-credentials-btn').style.display = 'none';
+            document.getElementById('cancel-edit-btn').style.display = 'none';
+        }
+
+        // Show credentials in edit mode (when editing existing)
+        function showCredentialsEditMode(credentials) {
+            document.getElementById('credentials-display').style.display = 'none';
+            document.getElementById('credentials-form').style.display = 'block';
+            document.getElementById('edit-credentials-btn').style.display = 'none';
+            document.getElementById('cancel-edit-btn').style.display = 'inline-block';
+            
+            document.getElementById('telegram-api-id').value = credentials.api_id || '';
+            document.getElementById('telegram-api-hash').value = credentials.api_hash || '';
+        }
+
+        // Load current credentials for editing
+        async function loadCurrentCredentialsForEdit() {
+            try {
+                const response = await fetch('/api/telegram/api-credentials', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.success && data.credentials) {
+                    showCredentialsEditMode(data.credentials);
+                } else {
+                    showAlert('No credentials found to edit', 'warning');
+                }
+            } catch (error) {
+                console.error('Error loading credentials for edit:', error);
+                showAlert('Error loading credentials', 'danger');
+            }
+        }
+
+
+        // Show Telegram login form
+        function showTelegramLogin() {
+            document.getElementById('telegram-login-section').style.display = 'block';
+            document.getElementById('telegram-status-section').style.display = 'none';
+            document.getElementById('telegram-groups-section').style.display = 'none';
+        }
+
+        // Show Telegram connected status
+        function showTelegramConnected() {
+            document.getElementById('telegram-login-section').style.display = 'none';
+            document.getElementById('telegram-status-section').style.display = 'block';
+            document.getElementById('telegram-groups-section').style.display = 'block';
+            
+            document.getElementById('connected-phone').textContent = telegramSession.phone_number;
+            document.getElementById('session-expires').textContent = new Date(telegramSession.expires_at).toLocaleString();
+        }
+
+        // Send OTP
+        document.getElementById('send-otp-btn').addEventListener('click', async function() {
+            const phone = document.getElementById('telegram-phone').value;
+            
+            if (!phone) {
+                alert('Please enter your phone number');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/telegram/start-auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ phone })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('telegram-login-form').style.display = 'none';
+                    document.getElementById('telegram-otp-form').style.display = 'block';
+                    showAlert('OTP sent to your phone. Please check your messages.', 'success');
+                } else {
+                    showAlert(data.message || 'Failed to send OTP', 'danger');
+                }
+            } catch (error) {
+                console.error('Error sending OTP:', error);
+                showAlert('Error sending OTP', 'danger');
+            }
+        });
+
+        // Verify OTP
+        document.getElementById('verify-otp-btn').addEventListener('click', async function() {
+            const otp = document.getElementById('telegram-otp').value;
+            const phone = document.getElementById('telegram-phone').value;
+            
+            if (!otp || otp.length !== 5) {
+                alert('Please enter a valid 5-digit OTP');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/telegram/verify-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ otp, phone })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    telegramSession = data.session;
+                    showTelegramConnected();
+                    loadTelegramGroups();
+                    showAlert('Telegram connected successfully!', 'success');
+                } else {
+                    showAlert(data.message || 'Invalid OTP', 'danger');
+                }
+            } catch (error) {
+                console.error('Error verifying OTP:', error);
+                showAlert('Error verifying OTP', 'danger');
+            }
+        });
+
+        // Resend OTP
+        document.getElementById('resend-otp-btn').addEventListener('click', async function() {
+            const phone = document.getElementById('telegram-phone').value;
+            
+            if (!phone) {
+                alert('Please enter your phone number first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/telegram/start-auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ phone })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('New OTP sent to your phone. Please check your messages.', 'success');
+                    // Clear the OTP input field
+                    document.getElementById('telegram-otp').value = '';
+                } else {
+                    showAlert(data.message || 'Failed to resend OTP', 'danger');
+                }
+            } catch (error) {
+                console.error('Error resending OTP:', error);
+                showAlert('Error resending OTP', 'danger');
+            }
+        });
+
+        // Disconnect Telegram
+        document.getElementById('disconnect-telegram-btn').addEventListener('click', async function() {
+            if (confirm('Are you sure you want to disconnect Telegram?')) {
+                try {
+                    const response = await fetch('/api/telegram/disconnect', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        telegramSession = null;
+                        showTelegramLogin();
+                        showAlert('Telegram disconnected', 'info');
+                    } else {
+                        showAlert(data.message || 'Failed to disconnect', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error disconnecting:', error);
+                    showAlert('Error disconnecting', 'danger');
+                }
+            }
+        });
+
+        // Load Telegram groups
+        async function loadTelegramGroups() {
+            document.getElementById('groups-loading').style.display = 'block';
+            document.getElementById('groups-content').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/telegram/groups', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayGroups(data.groups);
+                    document.getElementById('groups-loading').style.display = 'none';
+                    document.getElementById('groups-content').style.display = 'block';
+                } else {
+                    showAlert(data.message || 'Failed to load groups', 'danger');
+                    document.getElementById('groups-loading').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading groups:', error);
+                showAlert('Error loading groups', 'danger');
+                document.getElementById('groups-loading').style.display = 'none';
+            }
+        }
+
+        // Display groups
+        function displayGroups(groups) {
+            const groupsList = document.getElementById('groups-list');
+            groupsList.innerHTML = '';
+
+            groups.forEach(group => {
+                const groupCard = document.createElement('div');
+                groupCard.className = 'col-md-6 col-lg-4 mb-3';
+                groupCard.innerHTML = `
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="${group.id}" id="group-${group.id}">
+                                <label class="form-check-label" for="group-${group.id}">
+                                    <h6 class="card-title">${group.name}</h6>
+                                    <p class="card-text text-muted small">
+                                        <i class="bi bi-telegram me-1"></i>
+                                        ${group.username ? '@' + group.username : 'No username'}
+                                    </p>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Add event listener for checkbox
+                const checkbox = groupCard.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedGroups.add(group.id);
+                    } else {
+                        selectedGroups.delete(group.id);
+                    }
+                    updateSelectedCount();
+                });
+
+                // Check if group is already selected
+                if (group.is_monitoring) {
+                    checkbox.checked = true;
+                    selectedGroups.add(group.id);
+                }
+
+                groupsList.appendChild(groupCard);
+            });
+
+            updateSelectedCount();
+        }
+
+        // Update selected count
+        function updateSelectedCount() {
+            document.getElementById('selected-count').textContent = selectedGroups.size;
+        }
+
+        // Save selected groups
+        document.getElementById('save-selected-groups-btn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/telegram/save-groups', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ 
+                        groupIds: Array.from(selectedGroups) 
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Groups saved successfully!', 'success');
+                    loadTelegramGroups(); // Reload to show updated status
+                } else {
+                    showAlert(data.message || 'Failed to save groups', 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving groups:', error);
+                showAlert('Error saving groups', 'danger');
+            }
+        });
+
+        // Refresh groups
+        document.getElementById('refresh-groups-btn').addEventListener('click', function() {
+            loadTelegramGroups();
+        });
+
+        // Group search
+        document.getElementById('group-search').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const groupCards = document.querySelectorAll('#groups-list .col-md-6');
+            
+            groupCards.forEach(card => {
+                const title = card.querySelector('.card-title').textContent.toLowerCase();
+                if (title.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Show alert function
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('.main-content');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
