@@ -141,7 +141,7 @@
                     <div class="mb-3">
                         <label for="phone-number" class="form-label">Phone Number</label>
                         <input type="tel" class="form-control" id="phone-number" placeholder="+1234567890"
-                            value="+1234567890">
+                            value="">
                         <div class="form-text">Enter your phone number with country code</div>
                     </div>
                     <div class="col-md-4">
@@ -165,17 +165,10 @@
                             <div class="form-text">Enter the 5-digit code sent to your phone</div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <button type="button" class="btn btn-modern w-100" id="verify-otp-btn">
-                                <i class="bi bi-check-circle me-2"></i>Verify OTP
-                            </button>
-                        </div>
-                    </div>
                 </div>
-                <div class="d-flex gap-2 mt-2">
-                    <button type="button" class="btn btn-outline-modern" id="request-sms-btn">
-                        <i class="bi bi-envelope me-2"></i>Send via SMS
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-modern" id="verify-otp-btn">
+                        <i class="bi bi-check-circle me-2"></i>Verify OTP
                     </button>
                     <button type="button" class="btn btn-outline-modern" id="resend-otp-btn">
                         <i class="bi bi-arrow-clockwise me-2"></i>Resend OTP
@@ -194,8 +187,12 @@
         </div>
         <div class="card-body">
             <div class="alert alert-success">
-                <i class="bi bi-check-circle me-2"></i>
-                <strong>Telegram logged in!</strong> You can now manage your groups.
+                <div>
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Telegram logged in!</strong> You can now manage your groups.
+                    <br>
+                    <small>Connected with: <span id="connected-phone-number">Loading...</span></small>
+                </div>
             </div>
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-outline-modern" id="disconnect-telegram-btn">
@@ -370,7 +367,7 @@
                     .then(data => {
                         if (data.success) {
                             showAlert('Telegram connected successfully!', 'success');
-                            showTelegramConnected();
+                            showTelegramConnected(phone);
                             loadGroups();
                         } else {
                             showAlert(data.message || 'Invalid OTP', 'danger');
@@ -387,46 +384,6 @@
                         // Hide loader
                         verifyBtn.innerHTML = originalText;
                         verifyBtn.disabled = false;
-                    });
-            });
-
-            // Request SMS
-            document.getElementById('request-sms-btn').addEventListener('click', function () {
-                const phone = document.getElementById('phone-number').value.trim();
-
-                // Show loader
-                const smsBtn = document.getElementById('request-sms-btn');
-                const originalText = smsBtn.innerHTML;
-                smsBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Requesting...';
-                smsBtn.disabled = true;
-
-                fetch('/api/telegram/resend-code-sms', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ phone })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            showAlert('OTP requested via SMS! Check your text messages.', 'success');
-                        } else {
-                            showAlert(data.message || 'Failed to request SMS', 'danger');
-                            if (data.expired) {
-                                document.getElementById('otp-section').style.display = 'none';
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error requesting SMS:', error);
-                        showAlert('Error requesting SMS', 'danger');
-                    })
-                    .finally(() => {
-                        // Hide loader
-                        smsBtn.innerHTML = originalText;
-                        smsBtn.disabled = false;
                     });
             });
 
@@ -511,11 +468,12 @@
 
             // Save Selected Groups
             document.getElementById('save-selected-groups-btn').addEventListener('click', function () {
-                const selectedGroups = Array.from(document.querySelectorAll('.group-item.selected')).map(item => ({
-                    groupId: item.dataset.groupId,
-                    groupName: item.dataset.groupName,
-                    username: item.dataset.username
-                }));
+                const groupIds = Array.from(document.querySelectorAll('.group-item.selected')).map(item => item.dataset.groupId);
+
+                if (groupIds.length === 0) {
+                    showAlert('Please select at least one group to monitor', 'warning');
+                    return;
+                }
 
                 // Show loader
                 const saveBtn = document.getElementById('save-selected-groups-btn');
@@ -529,7 +487,7 @@
                         'Content-Type': 'application/json',
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ groups: selectedGroups })
+                    body: JSON.stringify({ groupIds })
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -564,7 +522,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showTelegramConnected();
+                    showTelegramConnected(data.session.phone_number);
                     loadGroups();
                 } else {
                     showTelegramLogin();
@@ -585,7 +543,7 @@
 
                 if (data.success && data.credentials) {
                     showCredentialsDisplay(data.credentials);
-                    showTelegramLogin();
+                    // Don't call showTelegramLogin() here - let checkTelegramSession() handle it
                 } else {
                     showCredentialsForm();
                 }
@@ -642,10 +600,15 @@
         }
 
         // Show Telegram connected state
-        function showTelegramConnected() {
+        function showTelegramConnected(phoneNumber) {
             document.getElementById('telegram-login-section').style.display = 'none';
             document.getElementById('telegram-status-section').style.display = 'block';
             document.getElementById('telegram-groups-section').style.display = 'block';
+            
+            // Display the phone number
+            if (phoneNumber) {
+                document.getElementById('connected-phone-number').textContent = phoneNumber;
+            }
         }
 
         // Load groups
@@ -687,25 +650,27 @@
                 const groupItem = document.createElement('div');
                 groupItem.className = 'group-item';
                 groupItem.dataset.groupId = group.id;
-                groupItem.dataset.groupName = group.title;
+                groupItem.dataset.groupName = group.name;
                 groupItem.dataset.username = group.username || '';
 
                 groupItem.innerHTML = \`
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="group-\${group.id}">
+                            <input class="form-check-input" type="checkbox" id="group-\${group.id}" \${group.is_monitoring ? 'checked' : ''}>
                             <label class="form-check-label w-100" for="group-\${group.id}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <strong>\${group.title}</strong>
+                                        <strong>\${group.name}</strong>
                                         \${group.username ? \`<br><small class="text-muted">@\${group.username}</small>\` : ''}
-                                    </div>
-                                    <div class="text-muted">
-                                        <small>\${group.participants_count || 0} members</small>
                                     </div>
                                 </div>
                             </label>
                         </div>
                     \`;
+                    
+                    // Pre-select if already monitoring
+                    if (group.is_monitoring) {
+                        groupItem.classList.add('selected');
+                    }
                     
                     // Add click handler for group selection
                     groupItem.addEventListener('click', function(e) {
@@ -794,7 +759,6 @@
                     'save-api-credentials-btn',
                     'send-otp-btn', 
                     'verify-otp-btn',
-                    'request-sms-btn',
                     'resend-otp-btn',
                     'disconnect-telegram-btn',
                     'save-selected-groups-btn',
@@ -817,9 +781,6 @@
                                     break;
                                 case 'verify-otp-btn':
                                     button.innerHTML = '<i class="bi bi-check-circle me-2"></i>Verify OTP';
-                                    break;
-                                case 'request-sms-btn':
-                                    button.innerHTML = '<i class="bi bi-envelope me-2"></i>Send via SMS';
                                     break;
                                 case 'resend-otp-btn':
                                     button.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Resend OTP';
