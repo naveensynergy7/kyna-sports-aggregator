@@ -671,4 +671,45 @@ router.post('/disconnect', async (req, res) => {
     }
 });
 
+// Reload watcher groups
+router.post('/reload-watcher', async (req, res) => {
+    try {
+        const watcherUrl = process.env.WATCHER_URL || 'http://localhost:3001';
+        
+        // Call watcher's reload endpoint
+        const response = await fetch(`${watcherUrl}/reload`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        res.json(data);
+    } catch (error) {
+        console.error('Error reloading watcher:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error communicating with watcher. Make sure it is running.'
+        });
+    }
+});
+
+// Get watcher status
+router.get('/watcher-status', async (req, res) => {
+    try {
+        const watcherUrl = process.env.WATCHER_URL || 'http://localhost:3001';
+        
+        const response = await fetch(`${watcherUrl}/status`);
+        const data = await response.json();
+        
+        res.json(data);
+    } catch (error) {
+        console.error('Error getting watcher status:', error);
+        res.json({
+            success: false,
+            isConnected: false,
+            message: 'Watcher is not running'
+        });
+    }
+});
+
 module.exports = router;

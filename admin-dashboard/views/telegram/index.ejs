@@ -57,6 +57,31 @@
             height: 1.5rem;
             border-width: 0.15em;
         }
+
+        .btn-outline-modern {
+            background: transparent;
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-modern:hover {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .btn-outline-modern:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
     </style>
     `,
     body: `
@@ -227,10 +252,16 @@
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <div>
                     <span id="selected-count">0</span> groups selected
+                    <span id="watcher-status" class="ms-3"></span>
                 </div>
-                <button type="button" class="btn btn-modern" id="save-selected-groups-btn">
-                    <i class="bi bi-save me-2"></i>Save Selected Groups
-                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-modern" id="reload-watcher-btn">
+                        <i class="bi bi-arrow-repeat me-2"></i>Reload Watcher
+                    </button>
+                    <button type="button" class="btn btn-modern" id="save-selected-groups-btn">
+                        <i class="bi bi-save me-2"></i>Save Selected Groups
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -508,9 +539,40 @@
                     });
             });
 
+            // Reload Watcher
+            document.getElementById('reload-watcher-btn').addEventListener('click', function () {
+                const reloadBtn = document.getElementById('reload-watcher-btn');
+                const originalText = reloadBtn.innerHTML;
+                reloadBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Reloading...';
+                reloadBtn.disabled = true;
+
+                fetch('/api/telegram/reload-watcher', {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showAlert(\`Watcher reloaded! Now monitoring \${data.count} group(s)\`, 'success');
+                            checkWatcherStatus(); // Update status display
+                        } else {
+                            showAlert(data.message || data.error || 'Failed to reload watcher', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error reloading watcher:', error);
+                        showAlert('Error reloading watcher. Make sure the watcher is running.', 'danger');
+                    })
+                    .finally(() => {
+                        reloadBtn.innerHTML = originalText;
+                        reloadBtn.disabled = false;
+                    });
+            });
+
             // Initialize page
             checkTelegramSession();
             loadApiCredentials();
+            checkWatcherStatus(); // Check watcher status on load
         });
 
         // Check Telegram session status
@@ -757,12 +819,13 @@
             function reEnableAllButtons() {
                 const buttons = [
                     'save-api-credentials-btn',
-                    'send-otp-btn', 
+                    'send-otp-btn',
                     'verify-otp-btn',
                     'resend-otp-btn',
                     'disconnect-telegram-btn',
                     'save-selected-groups-btn',
-                    'refresh-groups-btn'
+                    'refresh-groups-btn',
+                    'reload-watcher-btn'
                 ];
 
                 buttons.forEach(buttonId => {
@@ -794,11 +857,38 @@
                                 case 'refresh-groups-btn':
                                     button.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh Groups';
                                     break;
+                                case 'reload-watcher-btn':
+                                    button.innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Reload Watcher';
+                                    break;
                             }
                         }
                     }
                 });
             }
+
+            // Check watcher status
+            async function checkWatcherStatus() {
+                try {
+                    const response = await fetch('/api/telegram/watcher-status', {
+                        credentials: 'include'
+                    });
+                    const data = await response.json();
+                    
+                    const statusEl = document.getElementById('watcher-status');
+                    if (data.isConnected) {
+                        statusEl.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Watcher Active (' + data.monitoringCount + ' groups)</span>';
+                    } else {
+                        statusEl.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Watcher Offline</span>';
+                    }
+                } catch (error) {
+                    console.error('Error checking watcher status:', error);
+                    const statusEl = document.getElementById('watcher-status');
+                    statusEl.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-question-circle me-1"></i>Unknown</span>';
+                }
+            }
+
+            // Auto-refresh watcher status every 30 seconds
+            setInterval(checkWatcherStatus, 30000);
 
             // Global error handler to re-enable buttons
             window.addEventListener('error', function(event) {
