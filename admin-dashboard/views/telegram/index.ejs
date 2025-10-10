@@ -446,6 +446,9 @@
                         <button type="button" class="btn btn-outline-modern" id="resend-otp-btn">
                             <i class="bi bi-arrow-clockwise me-2"></i>Resend OTP
                         </button>
+                        <button type="button" class="btn btn-outline-warning" id="request-sms-btn">
+                            <i class="bi bi-envelope me-2"></i>Send via SMS
+                        </button>
                     </div>
                 </div>
             </div>
@@ -809,10 +812,56 @@
                     showAlert('Telegram connected successfully!', 'success');
                 } else {
                     showAlert(data.message || 'Invalid OTP', 'danger');
+                    
+                    // If expired, reset the form
+                    if (data.expired) {
+                        document.getElementById('telegram-otp-form').style.display = 'none';
+                        document.getElementById('telegram-login-form').style.display = 'block';
+                    }
                 }
             } catch (error) {
                 console.error('Error verifying OTP:', error);
                 showAlert('Error verifying OTP', 'danger');
+            }
+        });
+
+        // Request SMS
+        document.getElementById('request-sms-btn').addEventListener('click', async function() {
+            const phone = document.getElementById('telegram-phone').value;
+            
+            if (!phone) {
+                alert('Phone number not found. Please start authentication again.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/telegram/resend-code-sms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ phone })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('OTP requested via SMS! Check your text messages.', 'success');
+                    // Clear the OTP input field
+                    document.getElementById('telegram-otp').value = '';
+                } else {
+                    showAlert(data.message || 'Failed to request SMS', 'danger');
+                    
+                    // If expired, reset the form
+                    if (data.expired) {
+                        document.getElementById('telegram-otp-form').style.display = 'none';
+                        document.getElementById('telegram-login-form').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error requesting SMS:', error);
+                showAlert('Error requesting SMS', 'danger');
             }
         });
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateAdmin } = require('../middleware/auth');
-const { TelegramClient } = require('telegram');
+const { Api, TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
 const crypto = require('crypto');
 
@@ -9,6 +9,12 @@ const router = express.Router();
 
 // Apply authentication middleware to all routes
 router.use(authenticateAdmin);
+
+// Store user sessions (in production, use a proper database)
+const userSessions = new Map();
+
+// Helper function to get session key for user
+const getSessionKey = (userId) => `user_${userId}`;
 
 // Get user's API credentials
 router.get('/api-credentials', async (req, res) => {
@@ -155,34 +161,60 @@ router.post('/start-auth', async (req, res) => {
                 connectionRetries: 5,
             });
 
-            // Connect to Telegram
             await client.connect();
 
-            // Send the code request - this triggers OTP to be sent
-            const result = await client.sendCode({
-                apiId: userApiId,
-                apiHash: userApiHash,
-            }, phone);
+            // Send code request using your working method
+            const result = await client.invoke(
+                new Api.auth.SendCode({
+                    apiId: userApiId,
+                    apiHash: userApiHash,
+                    phoneNumber: phone,
+                    settings: new Api.CodeSettings({
+                        allowFlashcall: false,
+                        currentNumber: false,
+                        allowAppHash: false,
+                    }),
+                })
+            );
 
             console.log('OTP sent successfully:', result);
+            console.log('Code type:', result.type.className);
+            console.log('Phone code hash:', result.phoneCodeHash);
 
-            // Store phone and code hash in session
-            req.session.telegramPhone = phone;
-            req.session.telegramPhoneCodeHash = result.phoneCodeHash;
-            req.session.telegramAuthInProgress = true;
+            // Store session data in Map (like your working code) - KEEP CLIENT CONNECTED
+            const sessionKey = getSessionKey(req.user.id);
+            userSessions.set(sessionKey, {
+                client,
+                apiId: userApiId,
+                apiHash: userApiHash,
+                phoneCodeHash: result.phoneCodeHash,
+                phoneNumber: phone,
+                stringSession
+            });
 
-            await client.disconnect();
+            // DON'T disconnect - keep client connected for verification
 
             let message = 'OTP sent! Please check your messages.';
-            if (result.isCodeViaApp) {
-                message = 'OTP sent to your Telegram app! Please check your Telegram app for the login code.';
+            let codeType = 'unknown';
+            
+            if (result.type && result.type.className === 'SentCodeTypeApp') {
+                message = `OTP sent to your Telegram app! Check "Telegram" messages in your app. Code length: ${result.type.length} digits.`;
+                codeType = 'app';
+            } else if (result.type && result.type.className === 'SentCodeTypeSms') {
+                message = `OTP sent via SMS! Check your text messages. Code length: ${result.type.length} digits.`;
+                codeType = 'sms';
+            } else if (result.type && result.type.className === 'SentCodeTypeCall') {
+                message = 'You will receive a phone call with the code.';
+                codeType = 'call';
             }
 
             res.json({
                 success: true,
                 message: message,
                 phone: phone,
-                isCodeViaApp: result.isCodeViaApp || false
+                codeType: codeType,
+                codeLength: result.type.length || 5,
+                phoneCodeHash: result.phoneCodeHash.substring(0, 6) + '...' // Show partial for debugging
             });
         } catch (telegramError) {
             console.error('Error sending OTP:', telegramError);
@@ -211,6 +243,78 @@ router.post('/start-auth', async (req, res) => {
     }
 });
 
+// Resend OTP via SMS
+router.post('/resend-code-sms', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        
+        // Get session data from Map
+        const sessionKey = getSessionKey(req.user.id);
+        const userSession = userSessions.get(sessionKey);
+        
+        if (!userSession || userSession.phoneNumber !== phone) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please start authentication first'
+            });
+        }
+
+        try {
+            const { client, phoneCodeHash } = userSession;
+
+            // Request code to be resent via SMS using your working method
+            const result = await client.invoke(
+                new Api.auth.ResendCode({
+                    phoneNumber: phone,
+                    phoneCodeHash: phoneCodeHash
+                })
+            );
+
+            console.log('Code resent:', result);
+
+            // Update session with new phone code hash
+            userSession.phoneCodeHash = result.phoneCodeHash;
+
+            // DON'T disconnect - keep client connected
+
+            let message = 'Code resent!';
+            if (result.type && result.type.className === 'SentCodeTypeSms') {
+                message = 'OTP sent via SMS! Check your text messages.';
+            } else if (result.type && result.type.className === 'SentCodeTypeApp') {
+                message = 'OTP sent to your Telegram app!';
+            }
+
+            res.json({
+                success: true,
+                message: message,
+                codeType: result.type.className
+            });
+        } catch (telegramError) {
+            console.error('Error resending code:', telegramError);
+            
+            let errorMessage = 'Failed to resend code. Please try again later.';
+            
+            if (telegramError.errorMessage === 'PHONE_CODE_EXPIRED') {
+                errorMessage = 'The previous code has expired. Please click "Send OTP" again to get a fresh code.';
+                // Clear the expired session data from Map
+                userSessions.delete(sessionKey);
+            }
+            
+            res.status(400).json({
+                success: false,
+                message: errorMessage,
+                expired: telegramError.errorMessage === 'PHONE_CODE_EXPIRED'
+            });
+        }
+    } catch (error) {
+        console.error('Error resending code:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error resending code'
+        });
+    }
+});
+
 // Verify OTP and create session
 router.post('/verify-otp', async (req, res) => {
     try {
@@ -223,8 +327,11 @@ router.post('/verify-otp', async (req, res) => {
             });
         }
 
-        // Check if we have the phone code hash from start-auth
-        if (!req.session.telegramPhoneCodeHash || req.session.telegramPhone !== phone) {
+        // Get session data from Map (like your working code)
+        const sessionKey = getSessionKey(req.user.id);
+        const userSession = userSessions.get(sessionKey);
+        
+        if (!userSession || userSession.phoneNumber !== phone) {
             return res.status(400).json({
                 success: false,
                 message: 'Please click "Send OTP" first to receive the code.'
@@ -232,41 +339,20 @@ router.post('/verify-otp', async (req, res) => {
         }
 
         try {
-            // Get user's API credentials
-            const [credentials] = await pool.execute(
-                'SELECT api_id, api_hash FROM telegram_api_credentials WHERE user_id = ?',
-                [req.user.id]
+            const { client, apiId, apiHash, phoneCodeHash, phoneNumber } = userSession;
+
+            // Sign in with phone code using your working method
+            const result = await client.invoke(
+                new Api.auth.SignIn({
+                    apiId: apiId,
+                    apiHash: apiHash,
+                    phoneNumber: phoneNumber,
+                    phoneCodeHash: phoneCodeHash,
+                    phoneCode: otp,
+                })
             );
 
-            if (credentials.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'API credentials not found. Please configure your Telegram API credentials first.'
-                });
-            }
-
-            const userApiId = parseInt(credentials[0].api_id);
-            const userApiHash = credentials[0].api_hash;
-
-            // Initialize Telegram client with empty session
-            const stringSession = new StringSession('');
-            const client = new TelegramClient(stringSession, userApiId, userApiHash, {
-                connectionRetries: 5,
-            });
-
-            // Connect and sign in using the phone code hash
-            await client.connect();
-
-            // Sign in with the OTP code
-            await client.signInUser({
-                apiId: userApiId,
-                apiHash: userApiHash,
-            }, {
-                phoneNumber: phone,
-                phoneCodeHash: req.session.telegramPhoneCodeHash,
-                phoneCode: otp,
-                onError: (err) => console.error('Sign in error:', err),
-            });
+            console.log('Sign in successful:', result);
 
             // Get session string
             const sessionString = client.session.save();
@@ -294,10 +380,8 @@ router.post('/verify-otp', async (req, res) => {
                 );
             }
 
-            // Clear auth session
-            delete req.session.telegramPhone;
-            delete req.session.telegramPhoneCodeHash;
-            delete req.session.telegramAuthInProgress;
+            // Clear session data from Map
+            userSessions.delete(sessionKey);
 
             // Disconnect client
             await client.disconnect();
@@ -312,9 +396,28 @@ router.post('/verify-otp', async (req, res) => {
             });
         } catch (telegramError) {
             console.error('Telegram authentication error:', telegramError);
+            
+            let errorMessage = 'Invalid OTP. Please check and try again.';
+            let expired = false;
+            
+            // Handle specific Telegram errors
+            if (telegramError.errorMessage === 'PHONE_CODE_INVALID') {
+                errorMessage = 'Invalid OTP code. Please check the code and try again.';
+            } else if (telegramError.errorMessage === 'PHONE_CODE_EXPIRED') {
+                errorMessage = 'OTP code has expired. Please click "Send OTP" again to get a fresh code.';
+                expired = true;
+                // Clear the expired session data from Map
+                userSessions.delete(sessionKey);
+            } else if (telegramError.errorMessage === 'PHONE_NUMBER_INVALID') {
+                errorMessage = 'Invalid phone number. Please try again.';
+            } else if (telegramError.errorMessage === 'SESSION_PASSWORD_NEEDED') {
+                errorMessage = '2FA is enabled on your account. This is not yet supported.';
+            }
+            
             res.status(400).json({
                 success: false,
-                message: 'Failed to authenticate with Telegram. Please check your OTP and try again.'
+                message: errorMessage,
+                expired: expired
             });
         }
     } catch (error) {
