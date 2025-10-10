@@ -1,5 +1,54 @@
 {
-  "mcpServers": {},
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/naveensingh/Documents/kyna-sports-aggregator"
+      ],
+      "env": {},
+      "disabled": false,
+      "alwaysAllow": [
+        "read_file",
+        "read_multiple_files",
+        "list_directory",
+        "directory_tree",
+        "search_files",
+        "get_file_info",
+        "list_allowed_directories"
+      ],
+      "requireApproval": [
+        "write_file",
+        "edit_file",
+        "create_directory",
+        "move_file"
+      ]
+    },
+    "browser-tools": {
+      "command": "npx",
+      "args": ["-y", "@agentdeskai/browser-tools-mcp@latest"],
+      "env": {},
+      "disabled": false,
+      "alwaysAllow": [
+        "getConsoleLogs",
+        "getConsoleErrors",
+        "getNetworkLogs",
+        "getNetworkErrors",
+        "takeScreenshot",
+        "getSelectedElement",
+        "wipeLogs",
+        "runAccessibilityAudit",
+        "runPerformanceAudit",
+        "runSEOAudit",
+        "runBestPracticesAudit",
+        "runNextJSAudit",
+        "runAuditMode",
+        "runDebuggerMode"
+      ],
+      "requireApproval": []
+    }
+  },
   "globalSettings": {
     "fileAccess": "always",
     "allowAllOperations": true,
