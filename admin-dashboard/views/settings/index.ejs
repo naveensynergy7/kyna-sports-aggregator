@@ -1,0 +1,404 @@
+<%- include('../layouts/main', {
+    title: title,
+    currentPage: 'settings',
+    user: user,
+    session: session,
+    additionalStyles: `
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <style>
+            .settings-section {
+                margin-bottom: 2rem;
+            }
+            
+            .form-section {
+                background: #ffffff;
+                border-radius: 0.75rem;
+                border: 1px solid #e2e8f0;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .form-section h5 {
+                color: #1e293b;
+                font-weight: 600;
+                margin-bottom: 1.5rem;
+                padding-bottom: 0.75rem;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            
+            .password-strength {
+                margin-top: 0.5rem;
+            }
+            
+            .strength-bar {
+                height: 4px;
+                background: #e2e8f0;
+                border-radius: 2px;
+                overflow: hidden;
+                margin-top: 0.5rem;
+            }
+            
+            .strength-fill {
+                height: 100%;
+                transition: all 0.3s ease;
+                border-radius: 2px;
+            }
+            
+            .strength-weak { background: #ef4444; width: 25%; }
+            .strength-fair { background: #f59e0b; width: 50%; }
+            .strength-good { background: #3b82f6; width: 75%; }
+            .strength-strong { background: #10b981; width: 100%; }
+            
+            .strength-text {
+                font-size: 0.75rem;
+                font-weight: 500;
+                margin-top: 0.25rem;
+            }
+            
+            .strength-weak-text { color: #ef4444; }
+            .strength-fair-text { color: #f59e0b; }
+            .strength-good-text { color: #3b82f6; }
+            .strength-strong-text { color: #10b981; }
+            
+            .loading {
+                display: none;
+            }
+            
+            .loading.show {
+                display: inline-block;
+            }
+        </style>
+    `,
+    body: `
+        <div class="page-header">
+            <h1 class="page-title">Settings</h1>
+        </div>
+
+        <!-- Account Information Section -->
+        <div class="settings-section">
+            <div class="form-section">
+                <h5>
+                    <i class="bi bi-person-circle me-2"></i>Account Information
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Current Email</label>
+                            <div class="form-control-plaintext bg-light p-2 rounded" id="display-user-email">
+                                ${user.email}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">User ID</label>
+                            <div class="form-control-plaintext bg-light p-2 rounded" id="display-user-id">
+                                ${user.id}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Email Section -->
+        <div class="settings-section">
+            <div class="form-section">
+                <h5>
+                    <i class="bi bi-envelope me-2"></i>Change Email Address
+                </h5>
+                <form id="email-form">
+                    <div class="mb-3">
+                        <label for="new-email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="new-email" value="${user.email}" placeholder="Enter email address" required>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-modern" id="update-email-btn">
+                            <i class="bi bi-save me-2"></i>Update Email
+                        </button>
+                        <button type="button" class="btn btn-outline-modern" id="clear-email-form">
+                            <i class="bi bi-x-circle me-2"></i>Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password Section -->
+        <div class="settings-section">
+            <div class="form-section">
+                <h5>
+                    <i class="bi bi-shield-lock me-2"></i>Change Password
+                </h5>
+                <form id="password-form">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="current-password" class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="current-password" placeholder="Enter current password" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="new-password" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="new-password" placeholder="Enter new password" required minlength="6">
+                                <div class="password-strength">
+                                    <div class="strength-bar">
+                                        <div class="strength-fill" id="strength-fill"></div>
+                                    </div>
+                                    <div class="strength-text" id="strength-text"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="confirm-password" class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirm-password" placeholder="Confirm new password" required minlength="6">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-modern" id="update-password-btn">
+                            <i class="bi bi-save me-2"></i>Update Password
+                        </button>
+                        <button type="button" class="btn btn-outline-modern" id="clear-password-form">
+                            <i class="bi bi-x-circle me-2"></i>Clear
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `,
+    additionalScripts: `
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Email form handling
+                document.getElementById('email-form').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    updateEmail();
+                });
+
+                // Password form handling
+                document.getElementById('password-form').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    updatePassword();
+                });
+
+                // Clear forms
+                document.getElementById('clear-email-form').addEventListener('click', function() {
+                    document.getElementById('new-email').value = '${user.email}';
+                });
+
+                document.getElementById('clear-password-form').addEventListener('click', function() {
+                    document.getElementById('password-form').reset();
+                    updatePasswordStrength('');
+                });
+
+                // Password strength indicator
+                document.getElementById('new-password').addEventListener('input', function() {
+                    updatePasswordStrength(this.value);
+                });
+
+                // Global error handler
+                window.addEventListener('error', function() {
+                    reEnableAllButtons();
+                });
+
+                window.addEventListener('unhandledrejection', function() {
+                    reEnableAllButtons();
+                });
+            });
+
+            // Update email function
+            async function updateEmail() {
+                const newEmail = document.getElementById('new-email').value.trim();
+
+                if (!newEmail) {
+                    showAlert('Please enter an email address', 'warning');
+                    return;
+                }
+
+                // Show loader
+                const updateBtn = document.getElementById('update-email-btn');
+                const originalText = updateBtn.innerHTML;
+                updateBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Updating...';
+                updateBtn.disabled = true;
+
+                try {
+                    const response = await fetch('/settings/update-email', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ newEmail })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showAlert('Email updated successfully!', 'success');
+                        // Update the displayed email in the account info section
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showAlert(data.message || 'Failed to update email', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error updating email:', error);
+                    showAlert('Error updating email. Please try again.', 'error');
+                } finally {
+                    updateBtn.innerHTML = originalText;
+                    updateBtn.disabled = false;
+                }
+            }
+
+            // Update password function
+            async function updatePassword() {
+                const currentPassword = document.getElementById('current-password').value.trim();
+                const newPassword = document.getElementById('new-password').value.trim();
+                const confirmPassword = document.getElementById('confirm-password').value.trim();
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    showAlert('Please fill in all fields', 'warning');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    showAlert('New password must be at least 6 characters long', 'warning');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    showAlert('New password and confirmation do not match', 'warning');
+                    return;
+                }
+
+                // Show loader
+                const updateBtn = document.getElementById('update-password-btn');
+                const originalText = updateBtn.innerHTML;
+                updateBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Updating...';
+                updateBtn.disabled = true;
+
+                try {
+                    const response = await fetch('/settings/update-password', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showAlert('Password updated successfully!', 'success');
+                        document.getElementById('password-form').reset();
+                        updatePasswordStrength('');
+                    } else {
+                        showAlert(data.message || 'Failed to update password', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error updating password:', error);
+                    showAlert('Error updating password. Please try again.', 'error');
+                } finally {
+                    updateBtn.innerHTML = originalText;
+                    updateBtn.disabled = false;
+                }
+            }
+
+            // Password strength indicator
+            function updatePasswordStrength(password) {
+                const strengthFill = document.getElementById('strength-fill');
+                const strengthText = document.getElementById('strength-text');
+
+                if (!password) {
+                    strengthFill.className = 'strength-fill';
+                    strengthText.textContent = '';
+                    return;
+                }
+
+                let strength = 0;
+                let strengthClass = '';
+                let strengthTextClass = '';
+                let strengthLabel = '';
+
+                // Length check
+                if (password.length >= 6) strength++;
+                if (password.length >= 8) strength++;
+
+                // Character variety checks
+                if (/[a-z]/.test(password)) strength++;
+                if (/[A-Z]/.test(password)) strength++;
+                if (/[0-9]/.test(password)) strength++;
+                if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+                // Determine strength level
+                if (strength <= 2) {
+                    strengthClass = 'strength-weak';
+                    strengthTextClass = 'strength-weak-text';
+                    strengthLabel = 'Weak';
+                } else if (strength <= 3) {
+                    strengthClass = 'strength-fair';
+                    strengthTextClass = 'strength-fair-text';
+                    strengthLabel = 'Fair';
+                } else if (strength <= 4) {
+                    strengthClass = 'strength-good';
+                    strengthTextClass = 'strength-good-text';
+                    strengthLabel = 'Good';
+                } else {
+                    strengthClass = 'strength-strong';
+                    strengthTextClass = 'strength-strong-text';
+                    strengthLabel = 'Strong';
+                }
+
+                strengthFill.className = 'strength-fill ' + strengthClass;
+                strengthText.className = 'strength-text ' + strengthTextClass;
+                strengthText.textContent = strengthLabel;
+            }
+
+            // Re-enable all buttons (error handler)
+            function reEnableAllButtons() {
+                const buttons = document.querySelectorAll('button[disabled]');
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    if (button.innerHTML.includes('hourglass-split')) {
+                        // Reset button text if it was in loading state
+                        if (button.id === 'update-email-btn') {
+                            button.innerHTML = '<i class="bi bi-save me-2"></i>Update Email';
+                        } else if (button.id === 'update-password-btn') {
+                            button.innerHTML = '<i class="bi bi-save me-2"></i>Update Password';
+                        }
+                    }
+                });
+            }
+
+            // Show alert using SweetAlert2
+            function showAlert(message, type) {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                    }
+                });
+
+                const iconMap = {
+                    'success': 'success',
+                    'error': 'error',
+                    'warning': 'warning',
+                    'info': 'info'
+                };
+
+                Toast.fire({
+                    icon: iconMap[type] || 'info',
+                    title: message
+                });
+            }
+        </script>
+    `
+}) %>

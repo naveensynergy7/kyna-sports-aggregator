@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const telegramRoutes = require('./routes/telegram');
 const telegramPageRoutes = require('./routes/telegram-page');
+const settingsRoutes = require('./routes/settings');
 const { authenticateAdmin } = require('./middleware/auth');
 
 const app = express();
@@ -62,6 +63,7 @@ app.use('/static', express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/dashboard', authenticateAdmin, dashboardRoutes);
 app.use('/telegram', telegramPageRoutes);
+app.use('/settings', settingsRoutes);
 app.use('/api/telegram', telegramRoutes);
 
 // Home route
