@@ -11,7 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "input": "^1.0.1",
+    "dotenv": "^16.0.3",
+    "mysql2": "^3.6.0",
     "telegram": "^2.26.22"
   }
 }
