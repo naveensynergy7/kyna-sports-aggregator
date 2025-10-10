@@ -94,11 +94,11 @@ router.post('/save-api-credentials', async (req, res) => {
 
 // Check Telegram session status
 router.get('/session-status', async (req, res) => {
-    try {
-        const [sessions] = await pool.execute(
-            'SELECT * FROM telegram_sessions WHERE user_id = ? AND is_verified = TRUE AND expires_at > NOW()',
-            [req.user.id]
-        );
+        try {
+            const [sessions] = await pool.execute(
+                'SELECT * FROM telegram_sessions WHERE user_id = ? AND is_verified = TRUE',
+                [req.user.id]
+            );
 
         if (sessions.length > 0) {
             const session = sessions[0];
@@ -107,7 +107,6 @@ router.get('/session-status', async (req, res) => {
                 session: {
                     id: session.id,
                     phone_number: session.phone_number,
-                    expires_at: session.expires_at,
                     created_at: session.created_at
                 }
             });
@@ -357,9 +356,7 @@ router.post('/verify-otp', async (req, res) => {
             // Get session string
             const sessionString = client.session.save();
 
-            // Save session to database
-            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
+            // Save session to database (no expiry - Telegram sessions extend automatically)
             // Check if user already has a session
             const [existingSessions] = await pool.execute(
                 'SELECT * FROM telegram_sessions WHERE user_id = ?',
@@ -369,14 +366,14 @@ router.post('/verify-otp', async (req, res) => {
             if (existingSessions.length > 0) {
                 // Update existing session
                 await pool.execute(
-                    'UPDATE telegram_sessions SET phone_number = ?, session_string = ?, is_verified = TRUE, expires_at = ? WHERE user_id = ?',
-                    [phone, sessionString, expiresAt, req.user.id]
+                    'UPDATE telegram_sessions SET phone_number = ?, session_string = ?, is_verified = TRUE, expires_at = NULL WHERE user_id = ?',
+                    [phone, sessionString, req.user.id]
                 );
             } else {
                 // Create new session
                 await pool.execute(
-                    'INSERT INTO telegram_sessions (user_id, phone_number, session_string, is_verified, expires_at) VALUES (?, ?, ?, TRUE, ?)',
-                    [req.user.id, phone, sessionString, expiresAt]
+                    'INSERT INTO telegram_sessions (user_id, phone_number, session_string, is_verified, expires_at) VALUES (?, ?, ?, TRUE, NULL)',
+                    [req.user.id, phone, sessionString]
                 );
             }
 
@@ -390,8 +387,7 @@ router.post('/verify-otp', async (req, res) => {
                 success: true,
                 message: 'Telegram connected successfully',
                 session: {
-                    phone_number: phone,
-                    expires_at: expiresAt
+                    phone_number: phone
                 }
             });
         } catch (telegramError) {
@@ -434,7 +430,7 @@ router.get('/groups', async (req, res) => {
     try {
         // Get user's Telegram session
         const [sessions] = await pool.execute(
-            'SELECT * FROM telegram_sessions WHERE user_id = ? AND is_verified = TRUE AND expires_at > NOW()',
+            'SELECT * FROM telegram_sessions WHERE user_id = ? AND is_verified = TRUE',
             [req.user.id]
         );
 
@@ -544,7 +540,7 @@ router.post('/save-groups', async (req, res) => {
 
         // Get user's Telegram session
         const [sessions] = await pool.execute(
-            'SELECT * FROM telegram_sessions WHERE user_id = ? AND is_verified = TRUE AND expires_at > NOW()',
+            'SELECT * FROM telegram_sessions WHERE user_id = ? AND is_verified = TRUE',
             [req.user.id]
         );
 

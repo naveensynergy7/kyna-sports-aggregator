@@ -1,7 +1,7 @@
 {
-  "name": "sports-admin-dashboard",
+  "name": "kyna-admin-dashboard",
   "version": "1.0.0",
-  "description": "Admin dashboard for sports game aggregator",
+  "description": "Admin dashboard for Kyna game aggregator",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",

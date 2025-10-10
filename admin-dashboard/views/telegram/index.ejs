@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - Sports Admin</title>
+    <title><%= title %> - Kyna Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
             --primary-color: #007bff;
@@ -276,7 +277,7 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h3><i class="bi bi-speedometer2 me-2"></i>Sports Admin</h3>
+            <h3><i class="bi bi-speedometer2 me-2"></i>Kyna Admin</h3>
         </div>
         
         <nav class="sidebar-nav">
@@ -335,10 +336,6 @@
     <div class="main-content">
         <div class="page-header">
             <h1 class="page-title">Telegram Management</h1>
-            <div class="session-info">
-                <i class="bi bi-clock me-1"></i>
-                Session expires: <%= new Date(session.expires_at).toLocaleString() %>
-            </div>
         </div>
 
         <!-- Telegram API Configuration Section -->
@@ -376,10 +373,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="alert alert-success">
-                        <i class="bi bi-check-circle me-2"></i>
-                        <strong>Credentials saved!</strong> You can now connect to Telegram.
                     </div>
                 </div>
                 
@@ -467,12 +460,12 @@
                         <p><strong>Phone:</strong> <span id="connected-phone"></span></p>
                         <p><strong>Status:</strong> <span class="badge bg-success">Connected</span></p>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>Session Expires:</strong> <span id="session-expires"></span></p>
-                        <button type="button" class="btn btn-outline-danger btn-sm" id="disconnect-telegram-btn">
-                            <i class="bi bi-x-circle me-1"></i>Disconnect
-                        </button>
-                    </div>
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="disconnect-telegram-btn">
+                                <i class="bi bi-x-circle me-1"></i>Disconnect
+                            </button>
+                        </div>
                 </div>
             </div>
         </div>
@@ -529,21 +522,6 @@
 
         // Check Telegram session status on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing...');
-            
-            // Test basic functionality first
-            console.log('Testing basic DOM access...');
-            const testElement = document.getElementById('save-api-credentials-btn');
-            console.log('Test element found:', testElement);
-            
-            if (testElement) {
-                console.log('Element exists, adding direct click handler...');
-                testElement.onclick = function() {
-                    console.log('DIRECT CLICK HANDLER WORKING!');
-                    alert('Button clicked successfully!');
-                };
-            }
-            
             
             // Edit credentials button
             const editBtn = document.getElementById('edit-credentials-btn');
@@ -611,6 +589,12 @@
                 return;
             }
 
+            // Show loader
+            const saveBtn = document.getElementById('save-api-credentials-btn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
+            saveBtn.disabled = true;
+
             try {
                 const response = await fetch('/api/telegram/save-api-credentials', {
                     method: 'POST',
@@ -634,6 +618,10 @@
             } catch (error) {
                 console.error('Error saving API credentials:', error);
                 showAlert('Error saving API credentials', 'danger');
+            } finally {
+                // Hide loader
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
             }
         }
 
@@ -744,9 +732,8 @@
             document.getElementById('telegram-login-section').style.display = 'none';
             document.getElementById('telegram-status-section').style.display = 'block';
             document.getElementById('telegram-groups-section').style.display = 'block';
-            
+
             document.getElementById('connected-phone').textContent = telegramSession.phone_number;
-            document.getElementById('session-expires').textContent = new Date(telegramSession.expires_at).toLocaleString();
         }
 
         // Send OTP
@@ -757,6 +744,12 @@
                 alert('Please enter your phone number');
                 return;
             }
+
+            // Show loader
+            const sendBtn = document.getElementById('send-otp-btn');
+            const originalText = sendBtn.innerHTML;
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Sending...';
+            sendBtn.disabled = true;
 
             try {
                 const response = await fetch('/api/telegram/start-auth', {
@@ -780,6 +773,10 @@
             } catch (error) {
                 console.error('Error sending OTP:', error);
                 showAlert('Error sending OTP', 'danger');
+            } finally {
+                // Hide loader
+                sendBtn.innerHTML = originalText;
+                sendBtn.disabled = false;
             }
         });
 
@@ -792,6 +789,12 @@
                 alert('Please enter a valid 5-digit OTP');
                 return;
             }
+
+            // Show loader
+            const verifyBtn = document.getElementById('verify-otp-btn');
+            const originalText = verifyBtn.innerHTML;
+            verifyBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Verifying...';
+            verifyBtn.disabled = true;
 
             try {
                 const response = await fetch('/api/telegram/verify-otp', {
@@ -822,6 +825,10 @@
             } catch (error) {
                 console.error('Error verifying OTP:', error);
                 showAlert('Error verifying OTP', 'danger');
+            } finally {
+                // Hide loader
+                verifyBtn.innerHTML = originalText;
+                verifyBtn.disabled = false;
             }
         });
 
@@ -833,6 +840,12 @@
                 alert('Phone number not found. Please start authentication again.');
                 return;
             }
+
+            // Show loader
+            const smsBtn = document.getElementById('request-sms-btn');
+            const originalText = smsBtn.innerHTML;
+            smsBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Sending...';
+            smsBtn.disabled = true;
 
             try {
                 const response = await fetch('/api/telegram/resend-code-sms', {
@@ -862,6 +875,10 @@
             } catch (error) {
                 console.error('Error requesting SMS:', error);
                 showAlert('Error requesting SMS', 'danger');
+            } finally {
+                // Hide loader
+                smsBtn.innerHTML = originalText;
+                smsBtn.disabled = false;
             }
         });
 
@@ -873,6 +890,12 @@
                 alert('Please enter your phone number first');
                 return;
             }
+
+            // Show loader
+            const resendBtn = document.getElementById('resend-otp-btn');
+            const originalText = resendBtn.innerHTML;
+            resendBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Resending...';
+            resendBtn.disabled = true;
 
             try {
                 const response = await fetch('/api/telegram/start-auth', {
@@ -896,12 +919,22 @@
             } catch (error) {
                 console.error('Error resending OTP:', error);
                 showAlert('Error resending OTP', 'danger');
+            } finally {
+                // Hide loader
+                resendBtn.innerHTML = originalText;
+                resendBtn.disabled = false;
             }
         });
 
         // Disconnect Telegram
         document.getElementById('disconnect-telegram-btn').addEventListener('click', async function() {
             if (confirm('Are you sure you want to disconnect Telegram?')) {
+                // Show loader
+                const disconnectBtn = document.getElementById('disconnect-telegram-btn');
+                const originalText = disconnectBtn.innerHTML;
+                disconnectBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Disconnecting...';
+                disconnectBtn.disabled = true;
+
                 try {
                     const response = await fetch('/api/telegram/disconnect', {
                         method: 'POST',
@@ -909,7 +942,7 @@
                     });
 
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         telegramSession = null;
                         showTelegramLogin();
@@ -920,6 +953,10 @@
                 } catch (error) {
                     console.error('Error disconnecting:', error);
                     showAlert('Error disconnecting', 'danger');
+                } finally {
+                    // Hide loader
+                    disconnectBtn.innerHTML = originalText;
+                    disconnectBtn.disabled = false;
                 }
             }
         });
@@ -1005,6 +1042,12 @@
 
         // Save selected groups
         document.getElementById('save-selected-groups-btn').addEventListener('click', async function() {
+            // Show loader
+            const saveGroupsBtn = document.getElementById('save-selected-groups-btn');
+            const originalText = saveGroupsBtn.innerHTML;
+            saveGroupsBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
+            saveGroupsBtn.disabled = true;
+
             try {
                 const response = await fetch('/api/telegram/save-groups', {
                     method: 'POST',
@@ -1012,13 +1055,13 @@
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ 
-                        groupIds: Array.from(selectedGroups) 
+                    body: JSON.stringify({
+                        groupIds: Array.from(selectedGroups)
                     })
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showAlert('Groups saved successfully!', 'success');
                     loadTelegramGroups(); // Reload to show updated status
@@ -1028,12 +1071,26 @@
             } catch (error) {
                 console.error('Error saving groups:', error);
                 showAlert('Error saving groups', 'danger');
+            } finally {
+                // Hide loader
+                saveGroupsBtn.innerHTML = originalText;
+                saveGroupsBtn.disabled = false;
             }
         });
 
         // Refresh groups
         document.getElementById('refresh-groups-btn').addEventListener('click', function() {
-            loadTelegramGroups();
+            // Show loader on refresh button
+            const refreshBtn = document.getElementById('refresh-groups-btn');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Refreshing...';
+            refreshBtn.disabled = true;
+
+            loadTelegramGroups().finally(() => {
+                // Hide loader
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+            });
         });
 
         // Group search
@@ -1051,25 +1108,120 @@
             });
         });
 
-        // Show alert function
+        // Show alert function using SweetAlert2
         function showAlert(message, type) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-            alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            const container = document.querySelector('.main-content');
-            container.insertBefore(alertDiv, container.firstChild);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
+            const config = {
+                text: message,
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end',
+                customClass: {
+                    popup: 'swal2-toast'
                 }
-            }, 5000);
+            };
+
+            switch(type) {
+                case 'success':
+                    Swal.fire({
+                        ...config,
+                        icon: 'success',
+                        iconColor: '#28a745'
+                    });
+                    break;
+                case 'danger':
+                case 'error':
+                    Swal.fire({
+                        ...config,
+                        icon: 'error',
+                        iconColor: '#dc3545'
+                    });
+                    break;
+                case 'warning':
+                    Swal.fire({
+                        ...config,
+                        icon: 'warning',
+                        iconColor: '#ffc107'
+                    });
+                    break;
+                case 'info':
+                    Swal.fire({
+                        ...config,
+                        icon: 'info',
+                        iconColor: '#17a2b8'
+                    });
+                    break;
+                default:
+                    Swal.fire({
+                        ...config,
+                        icon: 'info'
+                    });
+            }
         }
+
+        // Emergency function to re-enable all buttons (in case of unexpected errors)
+        function reEnableAllButtons() {
+            const buttons = [
+                'save-api-credentials-btn',
+                'send-otp-btn', 
+                'verify-otp-btn',
+                'request-sms-btn',
+                'resend-otp-btn',
+                'disconnect-telegram-btn',
+                'save-selected-groups-btn',
+                'refresh-groups-btn'
+            ];
+
+            buttons.forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    button.disabled = false;
+                    // Reset to original text if it contains loading text
+                    if (button.innerHTML.includes('hourglass-split')) {
+                        // Reset to default text based on button type
+                        switch(buttonId) {
+                            case 'save-api-credentials-btn':
+                                button.innerHTML = '<i class="bi bi-save me-2"></i>Save API Credentials';
+                                break;
+                            case 'send-otp-btn':
+                                button.innerHTML = '<i class="bi bi-send me-2"></i>Send OTP';
+                                break;
+                            case 'verify-otp-btn':
+                                button.innerHTML = '<i class="bi bi-check-circle me-2"></i>Verify OTP';
+                                break;
+                            case 'request-sms-btn':
+                                button.innerHTML = '<i class="bi bi-envelope me-2"></i>Send via SMS';
+                                break;
+                            case 'resend-otp-btn':
+                                button.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Resend OTP';
+                                break;
+                            case 'disconnect-telegram-btn':
+                                button.innerHTML = '<i class="bi bi-x-circle me-1"></i>Disconnect';
+                                break;
+                            case 'save-selected-groups-btn':
+                                button.innerHTML = '<i class="bi bi-save me-2"></i>Save Selected Groups';
+                                break;
+                            case 'refresh-groups-btn':
+                                button.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh Groups';
+                                break;
+                        }
+                    }
+                }
+            });
+        }
+
+        // Global error handler to re-enable buttons
+        window.addEventListener('error', function(event) {
+            console.error('Global error detected:', event.error);
+            reEnableAllButtons();
+        });
+
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            reEnableAllButtons();
+        });
     </script>
 </body>
 </html>

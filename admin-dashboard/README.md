@@ -1,4 +1,4 @@
-# Sports Game Aggregator - Admin Dashboard
+# Kyna Game Aggregator - Admin Dashboard
 
 A Node.js admin dashboard with email/password authentication for managing sports game groups and Telegram integration.
 
@@ -25,10 +25,10 @@ npm install
 ```bash
 # Create MySQL database
 mysql -u root -p
-CREATE DATABASE sports_admin;
+CREATE DATABASE kyna_admin;
 
 # Import schema
-mysql -u root -p sports_admin < database/admin-schema.sql
+mysql -u root -p kyna_admin < database/admin-schema.sql
 ```
 
 ### 3. Environment Configuration
@@ -57,7 +57,7 @@ npm start
 
 ## Default Login
 
-- **Email**: admin@sportsapp.com
+- **Email**: admin@kyna.com
 - **Password**: admin123
 
 ## Database Schema

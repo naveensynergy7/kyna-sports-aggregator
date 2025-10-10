@@ -37,7 +37,7 @@ CREATE TABLE telegram_sessions (
     phone_number VARCHAR(20) NOT NULL,
     session_string TEXT,
     is_verified BOOLEAN DEFAULT TRUE,
-    expires_at TIMESTAMP,
+    expires_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE
@@ -57,6 +57,6 @@ CREATE TABLE telegram_groups (
     UNIQUE KEY unique_user_group (user_id, group_id)
 );
 
--- Insert default admin user (email: admin@sportsapp.com, password: admin123)
-INSERT INTO admin_users (email, password_hash) VALUES 
-('admin@sportsapp.com', '$2a$10$l.2LimNRWrlIqWPn659aO.PTOZ2adl6JBMCqup2aylmOzekTHkOTm');
+-- Insert default admin user (email: admin@kyna.com, password: admin123)
+INSERT INTO admin_users (email, password_hash) VALUES
+('admin@kyna.one', '$2a$10$l.2LimNRWrlIqWPn659aO.PTOZ2adl6JBMCqup2aylmOzekTHkOTm');
