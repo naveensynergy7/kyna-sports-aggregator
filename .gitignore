@@ -109,3 +109,10 @@ logs
 # Watcher specific
 watcher.log
 
+# Docker volumes and data
+mysql_data/
+*.sql.bak
+
+# Backup files
+*.bak
+.env.bak
