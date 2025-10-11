@@ -25,6 +25,7 @@ let client = null;
 let groupIds = new Set();
 let groupNames = {};
 let isConnected = false;
+let eventHandler = null; // Store the event handler reference
 
 // Fetch credentials and session from database
 async function getCredentialsFromDB() {
@@ -77,6 +78,107 @@ async function getGroupsToMonitor() {
     }
 }
 
+// Setup event handler for message monitoring
+function setupEventHandler() {
+    // Remove old event handler if it exists
+    if (eventHandler && client) {
+        try {
+            client.removeEventHandler(eventHandler);
+        } catch (e) {
+            // Ignore errors if handler doesn't exist
+        }
+    }
+
+    // Define the event handler
+    eventHandler = async (update) => {
+        try {
+            // Skip if update or className is undefined
+            if (!update || !update.className) {
+                return;
+            }
+            
+            // Handle both UpdateNewMessage and UpdateNewChannelMessage
+            if (update.className === 'UpdateNewMessage' || update.className === 'UpdateNewChannelMessage') {
+                const msg = update.message;
+                
+                // Get the channel/chat ID from the message
+                let groupId = null;
+                if (msg.peerId) {
+                    if (msg.peerId.channelId) {
+                        groupId = msg.peerId.channelId.toString();
+                    } else if (msg.peerId.chatId) {
+                        groupId = msg.peerId.chatId.toString();
+                    } else if (msg.peerId.userId) {
+                        // Skip private messages
+                        return;
+                    }
+                }
+                
+                // Check if message is from one of our monitored groups
+                if (groupId && groupIds.has(groupId)) {
+                    // Only process text messages, ignore media/sticker/gif
+                    if (!msg.message || msg.message.trim() === '') {
+                        return;
+                    }
+                    
+                    const messageText = msg.message.trim();
+                    
+                    // Get sender name (async operation, so we'll handle it properly)
+                    (async () => {
+                        try {
+                            let senderName = 'Unknown';
+                            
+                            try {
+                                const sender = await client.getEntity(msg.senderId);
+                                if (sender) {
+                                    console.log('DEBUG - Sender object:', {
+                                        firstName: sender.firstName,
+                                        lastName: sender.lastName,
+                                        username: sender.username,
+                                        phone: sender.phone,
+                                        id: sender.id
+                                    });
+                                    
+                                    // Try to build full name from first and last name
+                                    const firstName = sender.firstName || '';
+                                    const lastName = sender.lastName || '';
+                                    const fullName = [firstName, lastName].filter(Boolean).join(' ');
+                                    
+                                    // Prioritize: username > full name > phone > fallback to ID
+                                    senderName = sender.username || 
+                                                fullName || 
+                                                sender.phone;
+                                }
+                            } catch (senderError) {
+                                // Fallback to sender ID if we can't get entity
+                                senderName = `User${msg.username}`;
+                            }
+                            
+                            // Log the message with group name and sender
+                            console.log(`[${groupNames[groupId]}] ${senderName}: ${messageText}`);
+                            
+                            // TODO: Push to queue
+                            // await queue.push({
+                            //     groupId,
+                            //     groupName: groupNames[groupId],
+                            //     senderName,
+                            //     message: messageText
+                            // });
+                        } catch (error) {
+                            console.error('Error processing message:', error.message);
+                        }
+                    })();
+                }
+            }
+        } catch (error) {
+            console.error('Error in event handler:', error.message);
+        }
+    };
+
+    // Add the event handler to the client
+    client.addEventHandler(eventHandler);
+}
+
 // Reload groups from database
 async function reloadGroups() {
     try {
@@ -96,6 +198,12 @@ async function reloadGroups() {
         groupsToMonitor.forEach(group => {
             console.log(`   - ${group.group_name} (ID: ${group.group_id})`);
         });
+        
+        // Re-register the event handler with updated groups
+        if (client && isConnected) {
+            setupEventHandler();
+            console.log('✅ Event handler re-registered with updated groups');
+        }
         
         return {
             success: true,
@@ -139,14 +247,14 @@ async function initializeTelegramClient() {
         console.log('\n🔄 Connecting to Telegram...');
         
         // Use client.start() instead of client.connect() to properly initialize updates
-        await client.start({
+  await client.start({
             phoneNumber: async () => '', // Empty, we already have session
             password: async () => '',
             phoneCode: async () => '',
             onError: (err) => console.log('Connection error:', err),
-        });
-        
-        console.log('✅ Connected to Telegram successfully!');
+  });
+  
+  console.log('✅ Connected to Telegram successfully!');
         console.log('⏰ Waiting for messages...\n');
 
         // Initialize global Sets and Maps
@@ -155,79 +263,8 @@ async function initializeTelegramClient() {
             groupNames[group.group_id] = group.group_name;
         });
 
-        // Set up event handler for new messages
-        client.addEventHandler((update) => {
-            try {
-                // Handle both UpdateNewMessage and UpdateNewChannelMessage
-                if (update.className === 'UpdateNewMessage' || update.className === 'UpdateNewChannelMessage') {
-                    const msg = update.message;
-                    
-                    // Get the channel/chat ID from the message
-                    let groupId = null;
-                    if (msg.peerId) {
-                        if (msg.peerId.channelId) {
-                            groupId = msg.peerId.channelId.toString();
-                        } else if (msg.peerId.chatId) {
-                            groupId = msg.peerId.chatId.toString();
-                        } else if (msg.peerId.userId) {
-                            // Skip private messages
-                            return;
-                        }
-                    }
-                    
-                    // Check if message is from one of our monitored groups
-                    if (groupId && groupIds.has(groupId)) {
-                        // Only process text messages, ignore media/sticker/gif
-                        if (!msg.message || msg.message.trim() === '') {
-                            return;
-                        }
-                        
-                        const messageText = msg.message.trim();
-                        
-                        // Get sender name (async operation, so we'll handle it properly)
-                        (async () => {
-                            try {
-                                let senderName = 'Unknown';
-                                
-                                try {
-                                    const sender = await client.getEntity(msg.senderId);
-                                    if (sender) {
-                                        // Try to build full name from first and last name
-                                        const firstName = sender.firstName || '';
-                                        const lastName = sender.lastName || '';
-                                        const fullName = [firstName, lastName].filter(Boolean).join(' ');
-                                        
-                                        // Use full name, or username, or phone, or fallback to ID
-                                        senderName = fullName || 
-                                                    sender.username || 
-                                                    sender.phone || 
-                                                    `User${msg.senderId}`;
-                                    }
-                                } catch (senderError) {
-                                    // Fallback to sender ID if we can't get entity
-                                    senderName = `User${msg.senderId}`;
-                                }
-                                
-                                // Log the message with group name and sender
-                                console.log(`[${groupNames[groupId]}] ${senderName}: ${messageText}`);
-                                
-                                // TODO: Push to queue
-                                // await queue.push({
-                                //     groupId,
-                                //     groupName: groupNames[groupId],
-                                //     senderName,
-                                //     message: messageText
-                                // });
-                            } catch (error) {
-                                console.error('Error processing message:', error.message);
-                            }
-                        })();
-                    }
-                }
-            } catch (error) {
-                console.error('Error in event handler:', error.message);
-            }
-        });
+        // Setup event handler for message monitoring
+        setupEventHandler();
 
         isConnected = true;
         return true;
@@ -300,7 +337,7 @@ app.listen(CONTROL_PORT, () => {
         console.log('   Use the control API to restart once configured.\n');
     } else {
         console.log('✅ Watcher is running. Press Ctrl+C to stop.\n');
-    }
+  }
 })();
 
 // Handle graceful shutdown
