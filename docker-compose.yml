@@ -1,0 +1,208 @@
+# Docker Compose file format version
+version: '3.8'
+
+# Define all services (containers) that will run
+services:
+  # MySQL database service
+  mysql:
+    # Use official MySQL version 8.0 image from Docker Hub
+    image: mysql:8.0
+    
+    # Give the container a friendly name (easier to identify with 'docker ps')
+    container_name: kyna-mysql
+    
+    # Auto-restart container if it crashes or Docker restarts
+    restart: unless-stopped
+    
+    # Environment variables to configure MySQL on first startup
+    environment:
+      # Root user password (for admin access)
+      MYSQL_ROOT_PASSWORD: root_password_123
+      
+      # Database name to create automatically
+      MYSQL_DATABASE: kyna_admin
+      
+      # Create this non-root user automatically
+      MYSQL_USER: kyna_user
+      
+      # Password for the kyna_user
+      MYSQL_PASSWORD: kyna_pass_123
+    
+    # Port mapping: host_port:container_port
+    ports:
+      # Map host port 3307 to container port 3306 (avoid conflict with XAMPP on 3306)
+      - "3307:3306"
+    
+    # Persist data and initialize database
+    volumes:
+      # Persist MySQL data files so data survives container restarts
+      - mysql_data:/var/lib/mysql
+      
+      # Auto-run this SQL file when container starts for the first time (creates tables)
+      - ./admin-dashboard/database/admin-schema.sql:/docker-entrypoint-initdb.d/init.sql
+    
+    # Connect to custom network (allows containers to communicate)
+    networks:
+      - kyna-network
+    
+    # Health check to verify MySQL is ready to accept connections
+    healthcheck:
+      # Command to check if MySQL is responding
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      
+      # How long to wait for the check to complete
+      timeout: 20s
+      
+      # How many times to retry before marking as unhealthy
+      retries: 10
+
+  # phpMyAdmin web interface for MySQL
+  phpmyadmin:
+    # Use official phpMyAdmin image
+    image: phpmyadmin:latest
+    
+    # Give the container a friendly name
+    container_name: kyna-phpmyadmin
+    
+    # Auto-restart container if it crashes or Docker restarts
+    restart: unless-stopped
+    
+    # Environment variables to configure phpMyAdmin
+    environment:
+      # Connect to the mysql service (container name)
+      PMA_HOST: mysql
+      
+      # MySQL port inside the container (not the host port)
+      PMA_PORT: 3306
+      
+      # Optional: Allow login with any MySQL user
+      PMA_ARBITRARY: 1
+    
+    # Port mapping: access phpMyAdmin at http://localhost:8080
+    ports:
+      - "8080:80"
+    
+    # Connect to the same network as MySQL
+    networks:
+      - kyna-network
+    
+    # Only start phpMyAdmin after MySQL is healthy
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # Admin Dashboard - Web interface for managing Telegram
+  admin-dashboard:
+    # Build the image from the Dockerfile in admin-dashboard directory
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    
+    # Give the container a friendly name
+    container_name: kyna-admin-dashboard
+    
+    # Auto-restart container if it crashes or Docker restarts
+    restart: unless-stopped
+    
+    # Port mapping: access admin dashboard at http://localhost:3000
+    ports:
+      - "3000:3000"
+    
+    # Mount source code for hot-reload during development
+    # Changes to code on host machine will reflect immediately in container
+    volumes:
+      # Mount entire admin-dashboard directory to /app in container
+      - ./admin-dashboard:/app
+      
+      # Prevent overwriting node_modules in container with host's node_modules
+      # This ensures container uses its own installed dependencies
+      - /app/node_modules
+      
+      # Share the .env file from root directory with the container
+      - ./.env:/app/.env:ro
+    
+    # Connect to the same network so it can talk to MySQL
+    networks:
+      - kyna-network
+    
+    # Start admin-dashboard only after MySQL is ready
+    # This prevents "database connection failed" errors on startup
+    depends_on:
+      mysql:
+        condition: service_healthy
+    
+    # Environment variables (can also be read from .env file)
+    environment:
+      # Tell the container to connect to 'mysql' service, not 'localhost'
+      # In Docker network, services talk to each other by service name
+      DB_HOST: mysql
+      
+      # Use internal MySQL port (3306), not the host-mapped port (3307)
+      DB_PORT: 3306
+      
+      # Node environment (development enables detailed error messages)
+      NODE_ENV: development
+
+  # Telegram Watcher - Monitors Telegram groups for messages
+  watcher:
+    # Build the image from the Dockerfile in watchers/telegram directory
+    build:
+      context: ./watchers/telegram
+      dockerfile: Dockerfile
+    
+    # Give the container a friendly name
+    container_name: kyna-watcher
+    
+    # Auto-restart container if it crashes or Docker restarts
+    restart: unless-stopped
+    
+    # Port mapping: watcher control API accessible at http://localhost:3001
+    ports:
+      - "3001:3001"
+    
+    # Mount source code for hot-reload during development
+    volumes:
+      # Mount entire watcher directory to /app in container
+      - ./watchers/telegram:/app
+      
+      # Prevent overwriting node_modules in container
+      - /app/node_modules
+      
+      # Share the .env file from root directory with the container
+      - ./.env:/app/.env:ro
+    
+    # Connect to the same network so it can talk to MySQL
+    networks:
+      - kyna-network
+    
+    # Start watcher only after MySQL is ready
+    # Watcher needs database to fetch session and groups
+    depends_on:
+      mysql:
+        condition: service_healthy
+    
+    # Environment variables
+    environment:
+      # Connect to 'mysql' service by name (Docker network DNS)
+      DB_HOST: mysql
+      
+      # Use internal MySQL port
+      DB_PORT: 3306
+      
+      # Node environment
+      NODE_ENV: development
+
+# Define named volumes (persistent storage that survives container deletion)
+volumes:
+  # Volume to store MySQL database files
+  mysql_data:
+    # Use local disk driver
+    driver: local
+
+# Define custom networks for container communication
+networks:
+  # Custom network for this project
+  kyna-network:
+    # Use bridge driver (standard for single-host networking)
+    driver: bridge
+

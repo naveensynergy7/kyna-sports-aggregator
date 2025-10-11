@@ -3,7 +3,9 @@ const session = require('express-session');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+// Load .env from app root
+// In Docker, .env is mounted to /app/.env
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');

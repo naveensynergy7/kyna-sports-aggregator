@@ -2,7 +2,10 @@ const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
 const mysql = require('mysql2/promise');
 const express = require('express');
-require('dotenv').config();
+const path = require('path');
+// Load .env from app root
+// In Docker, .env is mounted to /app/.env
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Create Express app for control API
 const app = express();
@@ -12,6 +15,7 @@ const CONTROL_PORT = process.env.WATCHER_CONTROL_PORT || 3001;
 // Database configuration
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'kyna_admin',

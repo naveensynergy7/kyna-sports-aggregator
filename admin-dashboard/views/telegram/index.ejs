@@ -304,7 +304,7 @@
                         'Content-Type': 'application/json',
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ apiId, apiHash })
+                    body: JSON.stringify({ api_id: apiId, api_hash: apiHash })
                 })
                     .then(response => response.json())
                     .then(data => {
