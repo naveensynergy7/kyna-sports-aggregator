@@ -1,4 +1,4 @@
-# Docker Compose file format version
+# Docker Compose file for Kyna Sports Aggregator
 version: '3.8'
 
 # Define all services (containers) that will run
@@ -38,8 +38,9 @@ services:
       # Persist MySQL data files so data survives container restarts
       - mysql_data:/var/lib/mysql
       
-      # Auto-run this SQL file when container starts for the first time (creates tables)
-      - ./admin-dashboard/database/admin-schema.sql:/docker-entrypoint-initdb.d/init.sql
+      # Auto-run SQL files when container starts for the first time (creates tables)
+      - ./admin-dashboard/database/admin-schema.sql:/docker-entrypoint-initdb.d/01-admin-schema.sql
+      - ./open-ai-parser-queue/database/parser-schema.sql:/docker-entrypoint-initdb.d/02-parser-schema.sql
     
     # Connect to custom network (allows containers to communicate)
     networks:
@@ -192,10 +193,59 @@ services:
       # Node environment
       NODE_ENV: development
 
+  # Redis for queue management
+  redis:
+    image: redis:7-alpine
+    container_name: kyna-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password_123}
+    networks:
+      - kyna-network
+    volumes:
+      - redis_data:/data
+
+  # OpenAI Parser Queue - Processes messages with AI
+  parser-queue:
+    build:
+      context: ./open-ai-parser-queue
+      dockerfile: Dockerfile
+    container_name: kyna-parser-queue
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./open-ai-parser-queue:/app
+      - /app/node_modules
+      - ./.env:/app/.env:ro
+    networks:
+      - kyna-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: kyna_user
+      DB_PASSWORD: kyna_pass_123
+      DB_NAME: kyna_admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NODE_ENV: development
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
 # Define named volumes (persistent storage that survives container deletion)
 volumes:
   # Volume to store MySQL database files
   mysql_data:
+    # Use local disk driver
+    driver: local
+  
+  # Volume to store Redis data
+  redis_data:
     # Use local disk driver
     driver: local
 

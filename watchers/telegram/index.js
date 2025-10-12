@@ -234,6 +234,7 @@ async function initializeTelegramClient() {
         
         if (groupsToMonitor.length === 0) {
             console.log('⚠️  No groups to monitor. Please configure groups in the admin dashboard.');
+            console.log('💡 The watcher will automatically restart when you save groups.');
             return false;
         }
 

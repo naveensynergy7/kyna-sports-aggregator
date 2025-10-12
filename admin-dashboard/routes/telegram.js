@@ -79,9 +79,30 @@ router.post('/save-api-credentials', async (req, res) => {
             );
         }
 
+        // Automatically restart watcher after saving API credentials
+        try {
+            console.log('🔄 Auto-restarting watcher after API credentials save...');
+            const watcherUrl = process.env.WATCHER_URL || 'http://localhost:3001';
+            
+            const restartResponse = await fetch(`${watcherUrl}/restart`, {
+                method: 'POST'
+            });
+            
+            const restartData = await restartResponse.json();
+            
+            if (restartData.success) {
+                console.log('✅ Watcher restarted successfully after API credentials save');
+            } else {
+                console.log('⚠️ Watcher restart failed after API credentials save:', restartData.message);
+            }
+        } catch (restartError) {
+            console.error('❌ Error auto-restarting watcher after API credentials save:', restartError.message);
+            // Don't fail the credentials save if restart fails
+        }
+
         res.json({
             success: true,
-            message: 'API credentials saved successfully'
+            message: 'API credentials saved successfully and watcher restarted'
         });
     } catch (error) {
         console.error('Error saving API credentials:', error);
@@ -383,9 +404,30 @@ router.post('/verify-otp', async (req, res) => {
             // Disconnect client
             await client.disconnect();
 
+            // Automatically restart watcher after successful login
+            try {
+                console.log('🔄 Auto-restarting watcher after Telegram login...');
+                const watcherUrl = process.env.WATCHER_URL || 'http://localhost:3001';
+                
+                const restartResponse = await fetch(`${watcherUrl}/restart`, {
+                    method: 'POST'
+                });
+                
+                const restartData = await restartResponse.json();
+                
+                if (restartData.success) {
+                    console.log('✅ Watcher restarted successfully after login');
+                } else {
+                    console.log('⚠️ Watcher restart failed after login:', restartData.message);
+                }
+            } catch (restartError) {
+                console.error('❌ Error auto-restarting watcher after login:', restartError.message);
+                // Don't fail the login if restart fails
+            }
+
             res.json({
                 success: true,
-                message: 'Telegram connected successfully',
+                message: 'Telegram connected successfully and watcher restarted',
                 session: {
                     phone_number: phone
                 }
@@ -622,9 +664,30 @@ router.post('/save-groups', async (req, res) => {
 
             await client.disconnect();
 
+            // Automatically restart watcher after saving groups
+            try {
+                console.log('🔄 Auto-restarting watcher after group save...');
+                const watcherUrl = process.env.WATCHER_URL || 'http://localhost:3001';
+                
+                const restartResponse = await fetch(`${watcherUrl}/restart`, {
+                    method: 'POST'
+                });
+                
+                const restartData = await restartResponse.json();
+                
+                if (restartData.success) {
+                    console.log('✅ Watcher restarted successfully');
+                } else {
+                    console.log('⚠️ Watcher restart failed:', restartData.message);
+                }
+            } catch (restartError) {
+                console.error('❌ Error auto-restarting watcher:', restartError.message);
+                // Don't fail the group save if restart fails
+            }
+
             res.json({
                 success: true,
-                message: 'Groups saved successfully',
+                message: 'Groups saved successfully and watcher restarted',
                 savedCount: selectedGroups.length
             });
         } catch (telegramError) {

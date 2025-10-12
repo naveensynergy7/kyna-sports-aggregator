@@ -1,0 +1,10 @@
+{
+  "watch": ["index.js", "*.js"],
+  "ext": "js,json",
+  "ignore": ["node_modules/**", "*.log"],
+  "delay": 1000,
+  "verbose": true,
+  "events": {
+    "restart": "echo '\n🔄 Restarting OpenAI Parser Queue...\n'"
+  }
+}
