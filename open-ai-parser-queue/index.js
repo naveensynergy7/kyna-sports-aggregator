@@ -21,6 +21,15 @@ const logger = winston.createLogger({
         winston.format.colorize(),
         winston.format.simple()
       )
+    }),
+    new winston.transports.File({
+      filename: '/app/logs/parser-queue.log',
+      maxsize: 10 * 1024 * 1024, // 10MB
+      maxFiles: 5,
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
     })
   ]
 });

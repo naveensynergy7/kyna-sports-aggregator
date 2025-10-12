@@ -19,7 +19,8 @@ RUN npm install -g nodemon
 # Copy application code
 COPY . .
 
-# Create non-root user
+# Create logs directory and non-root user
+RUN mkdir -p /app/logs
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 

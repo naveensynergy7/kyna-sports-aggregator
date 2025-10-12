@@ -121,6 +121,9 @@ services:
       
       # Share the .env file from root directory with the container
       - ./.env:/app/.env:ro
+      
+      # Mount parser queue logs so admin dashboard can read them
+      - ./open-ai-parser-queue/logs:/app/parser-logs:ro
     
     # Connect to the same network so it can talk to MySQL
     networks:
@@ -219,6 +222,7 @@ services:
       - ./open-ai-parser-queue:/app
       - /app/node_modules
       - ./.env:/app/.env:ro
+      - ./open-ai-parser-queue/logs:/app/logs
     networks:
       - kyna-network
     depends_on:

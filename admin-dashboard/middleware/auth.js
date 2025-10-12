@@ -5,6 +5,13 @@ const crypto = require('crypto');
 const authenticateAdmin = async (req, res, next) => {
     try {
         if (!req.session.adminId) {
+            // Check if this is an API request
+            if (req.path.startsWith('/api/')) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Authentication required'
+                });
+            }
             return res.redirect('/auth/login');
         }
 
@@ -16,6 +23,13 @@ const authenticateAdmin = async (req, res, next) => {
 
         if (sessions.length === 0) {
             req.session.destroy();
+            // Check if this is an API request
+            if (req.path.startsWith('/api/')) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Session expired'
+                });
+            }
             return res.redirect('/auth/login');
         }
 
@@ -24,6 +38,13 @@ const authenticateAdmin = async (req, res, next) => {
         
         if (users.length === 0) {
             req.session.destroy();
+            // Check if this is an API request
+            if (req.path.startsWith('/api/')) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'User not found'
+                });
+            }
             return res.redirect('/auth/login');
         }
 
@@ -32,6 +53,13 @@ const authenticateAdmin = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('Auth middleware error:', error);
+        // Check if this is an API request
+        if (req.path.startsWith('/api/')) {
+            return res.status(500).json({
+                success: false,
+                error: 'Authentication error'
+            });
+        }
         res.redirect('/auth/login');
     }
 };

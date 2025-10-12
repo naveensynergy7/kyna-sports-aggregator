@@ -4,50 +4,330 @@
     user: user,
     session: session,
     additionalStyles: `
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <style>
-            .page-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
+            .nav-tabs {
+                border-bottom: 2px solid #e2e8f0;
                 margin-bottom: 2rem;
-                padding-bottom: 1rem;
-                border-bottom: 2px solid #e9ecef;
             }
 
-            .page-title {
-                font-size: 2rem;
+            .nav-tabs .nav-link {
+                border: none;
+                border-bottom: 3px solid transparent;
+                color: #64748b;
+                font-weight: 500;
+                padding: 1rem 1.5rem;
+                transition: all 0.2s ease;
+            }
+
+            .nav-tabs .nav-link:hover {
+                border-color: transparent;
+                border-bottom-color: #cbd5e1;
+                color: #1e293b;
+            }
+
+            .nav-tabs .nav-link.active {
+                color: #3b82f6;
+                border-bottom-color: #3b82f6;
+                background: transparent;
+            }
+
+            .tab-content {
+                min-height: 500px;
+            }
+
+            .spinner-border {
+                width: 1.5rem;
+                height: 1.5rem;
+                border-width: 0.15em;
+            }
+
+            .btn-outline-modern {
+                background: transparent;
+                color: #3b82f6;
+                border: 1px solid #3b82f6;
+                padding: 0.5rem 1rem;
+                border-radius: 0.5rem;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+
+            .btn-outline-modern:hover {
+                background: #3b82f6;
+                color: white;
+                border-color: #3b82f6;
+            }
+
+            .btn-outline-modern:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .log-entry {
+                padding: 0.75rem;
+                border-left: 3px solid #e2e8f0;
+                margin-bottom: 0.5rem;
+                background: #f8fafc;
+                border-radius: 0.25rem;
+                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                font-size: 0.875rem;
+            }
+
+            .log-entry.info {
+                border-left-color: #3b82f6;
+            }
+
+            .log-entry.warn {
+                border-left-color: #f59e0b;
+            }
+
+            .log-entry.error {
+                border-left-color: #ef4444;
+            }
+
+            .log-timestamp {
+                color: #6b7280;
+                font-size: 0.75rem;
+                margin-right: 0.5rem;
+            }
+
+            .log-level {
                 font-weight: 600;
-                color: var(--dark-color);
-                margin: 0;
+                margin-right: 0.5rem;
+            }
+
+            .log-level.info {
+                color: #3b82f6;
+            }
+
+            .log-level.warn {
+                color: #f59e0b;
+            }
+
+            .log-level.error {
+                color: #ef4444;
+            }
+
+            .logs-container {
+                max-height: 600px;
+                overflow-y: auto;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.5rem;
+                padding: 1rem;
             }
 
             .empty-state {
                 text-align: center;
                 padding: 4rem 2rem;
-                color: var(--secondary-color);
+                color: #64748b;
             }
 
             .empty-state i {
                 font-size: 4rem;
                 margin-bottom: 1rem;
                 opacity: 0.5;
+                color: #94a3b8;
             }
 
             .empty-state h3 {
                 margin-bottom: 1rem;
-                color: var(--dark-color);
+                color: #1e293b;
+                font-size: 1.5rem;
+                font-weight: 600;
+            }
+            
+            .empty-state p {
+                font-size: 1rem;
+                font-weight: 400;
             }
         </style>
     `,
     body: `
         <div class="page-header">
-            <h1 class="page-title">Dashboard</h1>
+            <h1 class="page-title">Platform Management</h1>
         </div>
 
-        <div class="empty-state">
-            <i class="bi bi-speedometer2"></i>
-            <h3>Dashboard Coming Soon</h3>
-            <p>Dashboard content will be added here later.</p>
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="platformTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="telegram-tab" data-bs-toggle="tab" data-bs-target="#telegram" type="button" role="tab">
+                    <i class="bi bi-telegram me-2"></i>Telegram
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="whatsapp-tab" data-bs-toggle="tab" data-bs-target="#whatsapp" type="button" role="tab">
+                    <i class="bi bi-whatsapp me-2"></i>WhatsApp
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="facebook-tab" data-bs-toggle="tab" data-bs-target="#facebook" type="button" role="tab">
+                    <i class="bi bi-facebook me-2"></i>Facebook
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="parser-logs-tab" data-bs-toggle="tab" data-bs-target="#parser-logs" type="button" role="tab">
+                    <i class="bi bi-journal-text me-2"></i>Parser Logs
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="platformTabContent">
+            <!-- Telegram Tab -->
+            <div class="tab-pane fade show active" id="telegram" role="tabpanel">
+                <div class="empty-state">
+                    <i class="bi bi-telegram"></i>
+                    <h3>Telegram Integration Coming Soon</h3>
+                    <p>Telegram management features will be added here in the future.</p>
+                </div>
+            </div>
+
+            <!-- WhatsApp Tab -->
+            <div class="tab-pane fade" id="whatsapp" role="tabpanel">
+                <div class="empty-state">
+                    <i class="bi bi-whatsapp"></i>
+                    <h3>WhatsApp Integration Coming Soon</h3>
+                    <p>WhatsApp management features will be added here in the future.</p>
+                </div>
+            </div>
+
+            <!-- Facebook Tab -->
+            <div class="tab-pane fade" id="facebook" role="tabpanel">
+                <div class="empty-state">
+                    <i class="bi bi-facebook"></i>
+                    <h3>Facebook Integration Coming Soon</h3>
+                    <p>Facebook management features will be added here in the future.</p>
+                </div>
+            </div>
+
+            <!-- Parser Logs Tab -->
+            <div class="tab-pane fade" id="parser-logs" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-journal-text me-2"></i>Parser Queue Logs
+                        </h5>
+                        <button type="button" class="btn btn-outline-modern btn-sm" id="refresh-logs-btn">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh Logs
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="logs-loading" class="text-center" style="display: none;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading logs...</p>
+                        </div>
+                        <div id="logs-container" class="logs-container">
+                            <!-- Logs will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+    `,
+    additionalScripts: `
+    <script>
+        // Initialize functionality on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeParserLogsFunctionality();
+        });
+
+        // ==================== PARSER LOGS FUNCTIONALITY ====================
+        function initializeParserLogsFunctionality() {
+            // Refresh logs button
+            document.getElementById('refresh-logs-btn').addEventListener('click', function () {
+                loadParserLogs();
+            });
+
+            // Load logs when parser logs tab is shown
+            document.getElementById('parser-logs-tab').addEventListener('shown.bs.tab', function () {
+                loadParserLogs();
+            });
+        }
+
+        // ==================== PARSER LOGS HELPER FUNCTIONS ====================
+            async function loadParserLogs() {
+                document.getElementById('logs-loading').style.display = 'block';
+                document.getElementById('logs-container').innerHTML = '';
+
+                try {
+                    const response = await fetch('/dashboard/api/parser-logs', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.status === 401) {
+                        // Authentication error - redirect to login
+                        window.location.href = '/auth/login';
+                        return;
+                    }
+                    
+                    const data = await response.json();
+
+                    if (data.success) {
+                        displayLogs(data.logs, data.source);
+                    } else {
+                        document.getElementById('logs-container').innerHTML = \`
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Failed to load logs: \${data.error || 'Unknown error'}
+                            </div>
+                        \`;
+                    }
+                } catch (error) {
+                    console.error('Error loading parser logs:', error);
+                    document.getElementById('logs-container').innerHTML = \`
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Error loading logs: \${error.message}
+                        </div>
+                    \`;
+                } finally {
+                    document.getElementById('logs-loading').style.display = 'none';
+                }
+            }
+
+            function displayLogs(logs, source = 'real') {
+                const logsContainer = document.getElementById('logs-container');
+                logsContainer.innerHTML = '';
+
+                if (logs.length === 0) {
+                    logsContainer.innerHTML = \`
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>No logs available</strong><br>
+                            <small class="text-muted">Logs will appear here when the parser queue processes messages. Try sending a test message to the parser queue.</small>
+                        </div>
+                    \`;
+                    return;
+                }
+
+                // Add source indicator
+                const sourceIndicator = document.createElement('div');
+                sourceIndicator.className = 'alert alert-success mb-3';
+                sourceIndicator.innerHTML = \`
+                    <i class="bi bi-check-circle me-2"></i>
+                    Showing <strong>real-time logs</strong> from Parser Queue
+                \`;
+                logsContainer.appendChild(sourceIndicator);
+
+                logs.forEach(log => {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = \`log-entry \${log.level}\`;
+                    
+                    const timestamp = new Date(log.timestamp).toLocaleString();
+                    const level = log.level.toUpperCase();
+                    
+                    logEntry.innerHTML = \`
+                        <span class="log-timestamp">\${timestamp}</span>
+                        <span class="log-level \${log.level}">\${level}</span>
+                        <span class="log-message">\${log.message}</span>
+                    \`;
+                    
+                    logsContainer.appendChild(logEntry);
+                });
+            }
+    </script>
     `
 }) %>
