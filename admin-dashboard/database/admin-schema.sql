@@ -1,3 +1,7 @@
+-- Set default character set to utf8mb4 for full Unicode support (including emojis)
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
 -- Admin Users Table
 CREATE TABLE admin_users (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -6,7 +10,7 @@ CREATE TABLE admin_users (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Admin Sessions Table
 CREATE TABLE admin_sessions (
@@ -16,7 +20,7 @@ CREATE TABLE admin_sessions (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Telegram API Credentials Table
 CREATE TABLE telegram_api_credentials (
@@ -28,7 +32,7 @@ CREATE TABLE telegram_api_credentials (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_credentials (user_id)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Telegram Sessions Table
 CREATE TABLE telegram_sessions (
@@ -41,7 +45,7 @@ CREATE TABLE telegram_sessions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Telegram Groups Table
 CREATE TABLE telegram_groups (
@@ -55,7 +59,7 @@ CREATE TABLE telegram_groups (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_group (user_id, group_id)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Insert default admin user (email: admin@kyna.com, password: admin123)
 INSERT INTO admin_users (email, password_hash) VALUES
