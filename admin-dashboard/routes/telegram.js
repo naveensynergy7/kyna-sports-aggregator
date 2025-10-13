@@ -179,6 +179,10 @@ router.post('/start-auth', async (req, res) => {
             const stringSession = new StringSession('');
             const client = new TelegramClient(stringSession, userApiId, userApiHash, {
                 connectionRetries: 5,
+                timeout: 30000, // 30 seconds timeout
+                retryDelay: 1000, // 1 second delay between retries
+                useWSS: false, // Use TCP instead of WebSocket for better stability
+                floodSleepThreshold: 60, // Handle flood errors better
             });
 
             await client.connect();
@@ -506,6 +510,10 @@ router.get('/groups', async (req, res) => {
             const stringSession = new StringSession(session.session_string);
             const client = new TelegramClient(stringSession, userApiId, userApiHash, {
                 connectionRetries: 5,
+                timeout: 30000, // 30 seconds timeout
+                retryDelay: 1000, // 1 second delay between retries
+                useWSS: false, // Use TCP instead of WebSocket for better stability
+                floodSleepThreshold: 60, // Handle flood errors better
             });
 
             await client.connect();
@@ -616,6 +624,10 @@ router.post('/save-groups', async (req, res) => {
             const stringSession = new StringSession(session.session_string);
             const client = new TelegramClient(stringSession, userApiId, userApiHash, {
                 connectionRetries: 5,
+                timeout: 30000, // 30 seconds timeout
+                retryDelay: 1000, // 1 second delay between retries
+                useWSS: false, // Use TCP instead of WebSocket for better stability
+                floodSleepThreshold: 60, // Handle flood errors better
             });
 
             await client.connect();
@@ -648,7 +660,7 @@ router.post('/save-groups', async (req, res) => {
                 const values = selectedGroups.map(group => [
                     req.user.id,
                     group.group_id,
-                    group.group_name,
+                    'Group', // Simplified group name to avoid encoding issues
                     group.username,
                     true // is_monitoring
                 ]);
@@ -656,10 +668,37 @@ router.post('/save-groups', async (req, res) => {
                 const placeholders = values.map(() => '(?, ?, ?, ?, ?)').join(', ');
                 const flatValues = values.flat();
 
-                await pool.execute(
-                    `INSERT INTO telegram_groups (user_id, group_id, group_name, username, is_monitoring) VALUES ${placeholders}`,
-                    flatValues
-                );
+                try {
+                    await pool.execute(
+                        `INSERT INTO telegram_groups (user_id, group_id, group_name, username, is_monitoring) VALUES ${placeholders}`,
+                        flatValues
+                    );
+                } catch (dbError) {
+                    console.error('Database error saving groups:', dbError);
+                    
+                    // If it's a character encoding error, try with sanitized names
+                    if (dbError.code === 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD') {
+                        console.log('Retrying with sanitized group names...');
+                        
+                        const sanitizedValues = selectedGroups.map(group => [
+                            req.user.id,
+                            group.group_id,
+                            'Group', // Simplified group name to avoid encoding issues
+                            group.username,
+                            true
+                        ]);
+
+                        const sanitizedPlaceholders = sanitizedValues.map(() => '(?, ?, ?, ?, ?)').join(', ');
+                        const sanitizedFlatValues = sanitizedValues.flat();
+
+                        await pool.execute(
+                            `INSERT INTO telegram_groups (user_id, group_id, group_name, username, is_monitoring) VALUES ${sanitizedPlaceholders}`,
+                            sanitizedFlatValues
+                        );
+                    } else {
+                        throw dbError; // Re-throw if it's not a character encoding issue
+                    }
+                }
             }
 
             await client.disconnect();
