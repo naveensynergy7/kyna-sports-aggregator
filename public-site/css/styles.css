@@ -1,0 +1,240 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+    background-color: #f5f5f5;
+    color: #000;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    max-width: 420px;
+    margin: 0 auto;
+    background-color: #fff;
+    min-height: 100vh;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    padding: 20px 16px;
+    background-color: #fff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #000;
+    margin: 0;
+}
+
+main {
+    padding: 16px;
+}
+
+/* Game Card Styles */
+.game-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.card-tag {
+    background: linear-gradient(90deg, #e63946 0%, #d62828 100%);
+    color: #fff;
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
+}
+
+.card-tag.competitive {
+    background: linear-gradient(90deg, #e63946 0%, #d62828 100%);
+}
+
+.tag-right {
+    font-weight: 700;
+}
+
+.card-content {
+    padding: 16px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 16px;
+}
+
+.game-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #000;
+    flex: 1;
+    margin: 0;
+}
+
+.game-price {
+    font-size: 32px;
+    font-weight: 700;
+    color: #000;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.game-details {
+    margin-bottom: 12px;
+}
+
+.game-datetime {
+    font-size: 14px;
+    color: #000;
+    margin-bottom: 4px;
+}
+
+.game-location {
+    font-size: 14px;
+    color: #000;
+}
+
+.game-details-alt {
+    margin-bottom: 16px;
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #000;
+}
+
+.detail-row .icon {
+    font-size: 16px;
+    width: 20px;
+    display: inline-block;
+}
+
+.card-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.game-time-simple {
+    font-size: 16px;
+    font-weight: 600;
+    color: #000;
+}
+
+/* Button Styles */
+.btn-contact,
+.btn-details {
+    background-color: #000;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: capitalize;
+}
+
+.btn-contact:hover,
+.btn-details:hover {
+    background-color: #333;
+    transform: translateY(-1px);
+}
+
+.btn-contact:active,
+.btn-details:active {
+    transform: translateY(0);
+}
+
+.btn-details {
+    background-color: #fff;
+    color: #000;
+    border: 2px solid #000;
+}
+
+.btn-details:hover {
+    background-color: #f5f5f5;
+}
+
+/* Info Text */
+.info-text {
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+    margin: 24px 0;
+    line-height: 1.6;
+}
+
+.info-text p {
+    margin: 0;
+}
+
+/* Pricing Info */
+.pricing-info {
+    text-align: center;
+    font-size: 11px;
+    color: #000;
+    margin-top: 32px;
+    padding: 16px;
+    line-height: 1.4;
+}
+
+.pricing-info p {
+    margin: 2px 0;
+}
+
+.pricing-note {
+    font-size: 10px;
+    color: #666;
+    margin-top: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .container {
+        max-width: 100%;
+        box-shadow: none;
+    }
+    
+    .game-title {
+        font-size: 16px;
+    }
+    
+    .game-price {
+        font-size: 28px;
+    }
+}
+
+@media (min-width: 768px) {
+    .container {
+        margin-top: 20px;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+}
+

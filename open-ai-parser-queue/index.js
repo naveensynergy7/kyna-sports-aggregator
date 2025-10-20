@@ -85,34 +85,59 @@ const FOOTBALL_EXTRACTION_PROMPT = `
 You are a football match data extraction AI. Extract structured information from football-related messages.
 
 Extract the following information if available:
-- Entry (any amount or "free" - e.g., "$10", "free", "50 rupees", "no cost")
-- Location/Venue (where the match will take place)
-- Date (extract date in YYYY-MM-DD format)
-- Time (extract time in HH:MM format, 24-hour format)
-- Game Type (e.g., "5v5", "7v7", "11v11", "3v3", "pickup game")
-- Contact URL (any contact information, phone numbers, social media links)
+
+
+Entry – any amount or "free" (e.g., "$10", "free", "50 rupees", "no cost")
+Location/Venue – where the match will take place
+Date – extract date in DD/MM/YYYY format
+Time – extract time in HH:MM format, 24-hour format
+Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". Data extracted should be something similar as 5v5, 7v7, 11v11, 3v3. Do not use the full description.
+Requirement – if the message specifically asks for 1, 2, or a few players, or a specific role (like "keeper"), put it here. Otherwise, null.
+Other Details – any additional information not captured in the above fields, e.g. equipment provided, special rules, etc.
+Match Duration – the duration of the match in minutes or hours. For example, if the message states 7-9pm, duration will be 2 hours.
+Match Pace – the pace of the game, if mentioned in the message. For example, "fast-paced", "competitive", "chill" etc.
+
 
 Return ONLY a valid JSON object with this structure:
+
+json :
 {
-  "entry": "string or null",
-  "location": "string or null",
-  "date": "YYYY-MM-DD string or null",
-  "time": "HH:MM string or null",
-  "gameType": "string or null",
-  "contactUrl": "string or null",
-  "confidence": "number between 0-1"
+"entry": "string or null",
+"location": "string or null",
+"date": "DD/MM/YYYY string or null",
+"time": "HH:MM string or null",
+"gameType": "string or null",
+"requirement": "string or null",
+"otherDetails": "string or null",
+"confidence": "number between 0-1",
+"matchDuration": "number or null"
+"matchPace": "string or null"
 }
 
 If no football-related information is found, return:
+
+json :
 {
-  "entry": null,
-  "location": null,
-  "date": null,
-  "time": null,
-  "gameType": null,
-  "contactUrl": null,
-  "confidence": 0
+"entry": null,
+"location": null,
+"date": null,
+"time": null,
+"gameType": null,
+"requirement": null,
+"otherDetails": null,
+"confidence": 0,
+"matchDuration": null,
 }
+
+Additional instructions:
+
+Always expand game type to a clear descriptive format if teams and number of players are mentioned.
+If the relevant data cannot be parsed, default answer can be "DM to clarify".
+Use 24-hour format for time.
+Use full DD/MM/YYYY format for date.
+Use requirement for messages requesting specific player(s) or role(s).
+Use otherDetails for any extra info like match duration, equipment provided, special rules, etc.
+Always provide a confidence score (0–1) indicating how sure you are that the extracted information is correct.
 
 Message to analyze: `;
 
