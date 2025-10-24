@@ -252,12 +252,30 @@ async function saveParsedMessage(data) {
     // Helper function to convert undefined to null
     const toNull = (value) => (value === undefined || value === 'null' ? null : value);
     
+    // Determine status based on required fields
+    // If location, date, time, or game_type is missing → PENDING
+    // If all are present → APPROVED
+    const hasRequiredFields = 
+      extractedData.location && 
+      extractedData.date && 
+      extractedData.time && 
+      extractedData.gameType;
+    
+    const status = hasRequiredFields ? 'APPROVED' : 'PENDING';
+    
+    logger.info(`📊 Match status: ${status}`, {
+      location: !!extractedData.location,
+      date: !!extractedData.date,
+      time: !!extractedData.time,
+      gameType: !!extractedData.gameType
+    });
+    
     await connection.execute(`
       INSERT INTO football_matches (
         original_message, platform, entry, location, date, time, game_type, 
         requirement, other_details, contact_url, match_duration, match_pace, 
-        confidence, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        status, confidence, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [
       originalMessage,
       platform,
@@ -271,6 +289,7 @@ async function saveParsedMessage(data) {
       toNull(contactUrl || extractedData.contactUrl),
       toNull(extractedData.matchDuration),
       toNull(extractedData.matchPace),
+      status,
       extractedData.confidence || 0
     ]);
     
