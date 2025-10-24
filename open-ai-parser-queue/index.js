@@ -84,8 +84,9 @@ const messageSchema = Joi.object({
 const FOOTBALL_EXTRACTION_PROMPT = `
 You are a football match data extraction AI. Extract structured information from football-related messages.
 
-Extract the following information if available:
+CRITICAL: Return ONLY the raw JSON object. Do NOT wrap it in markdown code blocks. Do NOT add any explanatory text before or after the JSON. Just the pure JSON object.
 
+Extract the following information if available:
 
 Entry – any amount or "free" (e.g., "$10", "free", "50 rupees", "no cost")
 Location/Venue – where the match will take place
@@ -94,29 +95,26 @@ Time – extract time in HH:MM format, 24-hour format
 Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". Data extracted should be something similar as 5v5, 7v7, 11v11, 3v3. Do not use the full description.
 Requirement – if the message specifically asks for 1, 2, or a few players, or a specific role (like "keeper"), put it here. Otherwise, null.
 Other Details – any additional information not captured in the above fields, e.g. equipment provided, special rules, etc.
-Match Duration – the duration of the match in minutes or hours. For example, if the message states 7-9pm, duration will be 2 hours.
+Match Duration – the duration of the match in minutes. For example, if the message states 7-9pm, duration will be 120 minutes.
 Match Pace – the pace of the game, if mentioned in the message. For example, "fast-paced", "competitive", "chill" etc.
 
+Return ONLY this JSON structure (no markdown, no code blocks, no extra text):
 
-Return ONLY a valid JSON object with this structure:
-
-json :
 {
-"entry": "string or null",
-"location": "string or null",
-"date": "DD/MM/YYYY string or null",
-"time": "HH:MM string or null",
-"gameType": "string or null",
-"requirement": "string or null",
-"otherDetails": "string or null",
-"confidence": "number between 0-1",
-"matchDuration": "number or null"
-"matchPace": "string or null"
+"entry": "<extracted entry value or null>",
+"location": "<extracted location or null>",
+"date": "<extracted date in DD/MM/YYYY format or null>",
+"time": "<extracted time in HH:MM format or null>",
+"gameType": "<extracted game type or null>",
+"requirement": "<extracted requirement or null>",
+"otherDetails": "<extracted other details or null>",
+"confidence": <number between 0 and 1>,
+"matchDuration": <number in minutes or null>,
+"matchPace": "<extracted pace or null>"
 }
 
-If no football-related information is found, return:
+If no football-related information is found, return ONLY:
 
-json :
 {
 "entry": null,
 "location": null,
@@ -127,6 +125,7 @@ json :
 "otherDetails": null,
 "confidence": 0,
 "matchDuration": null,
+"matchPace": null
 }
 
 Additional instructions:
@@ -138,6 +137,9 @@ Use full DD/MM/YYYY format for date.
 Use requirement for messages requesting specific player(s) or role(s).
 Use otherDetails for any extra info like match duration, equipment provided, special rules, etc.
 Always provide a confidence score (0–1) indicating how sure you are that the extracted information is correct.
+Use matchPace for the pace of the game, if mentioned in the message. For example, "fast-paced", "competitive", "chill" etc.
+
+REMEMBER: Return ONLY the JSON object, nothing else. No markdown formatting, no code blocks, no explanations.
 
 Message to analyze: `;
 
@@ -228,8 +230,10 @@ async function saveParsedMessage(data) {
     
     await connection.execute(`
       INSERT INTO football_matches (
-        original_message, platform, entry, location, date, time, game_type, contact_url, confidence, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        original_message, platform, entry, location, date, time, game_type, 
+        requirement, other_details, contact_url, match_duration, match_pace, 
+        confidence, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [
       originalMessage,
       platform,
@@ -238,7 +242,11 @@ async function saveParsedMessage(data) {
       extractedData.date,
       extractedData.time,
       extractedData.gameType,
+      extractedData.requirement,
+      extractedData.otherDetails,
       contactUrl || extractedData.contactUrl,
+      extractedData.matchDuration,
+      extractedData.matchPace,
       extractedData.confidence
     ]);
     

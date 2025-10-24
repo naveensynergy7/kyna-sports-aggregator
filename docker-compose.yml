@@ -1,5 +1,3 @@
-# Docker Compose file for Kyna Sports Aggregator
-version: '3.8'
 
 # Define all services (containers) that will run
 services:
@@ -147,55 +145,6 @@ services:
       # Node environment (development enables detailed error messages)
       NODE_ENV: development
 
-  # Telegram Watcher - Monitors Telegram groups for messages
-  watcher:
-    # Build the image from the Dockerfile in watchers/telegram directory
-    build:
-      context: ./watchers/telegram
-      dockerfile: Dockerfile
-    
-    # Give the container a friendly name
-    container_name: kyna-watcher
-    
-    # Auto-restart container if it crashes or Docker restarts
-    restart: unless-stopped
-    
-    # Port mapping: watcher control API accessible at http://localhost:3001
-    ports:
-      - "3001:3001"
-    
-    # Mount source code for hot-reload during development
-    volumes:
-      # Mount entire watcher directory to /app in container
-      - ./watchers/telegram:/app
-      
-      # Prevent overwriting node_modules in container
-      - /app/node_modules
-      
-      # Share the .env file from root directory with the container
-      - ./.env:/app/.env:ro
-    
-    # Connect to the same network so it can talk to MySQL
-    networks:
-      - kyna-network
-    
-    # Start watcher only after MySQL is ready
-    # Watcher needs database to fetch session and groups
-    depends_on:
-      mysql:
-        condition: service_healthy
-    
-    # Environment variables
-    environment:
-      # Connect to 'mysql' service by name (Docker network DNS)
-      DB_HOST: mysql
-      
-      # Use internal MySQL port
-      DB_PORT: 3306
-      
-      # Node environment
-      NODE_ENV: development
-
   # Redis for queue management
   redis:
     image: redis:7-alpine
@@ -238,6 +187,7 @@ services:
       DB_NAME: kyna_admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}
       NODE_ENV: development
       OPENAI_API_KEY: ${OPENAI_API_KEY}
 

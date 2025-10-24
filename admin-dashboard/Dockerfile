@@ -10,7 +10,7 @@ LABEL maintainer="Kyna Team"
 LABEL description="Admin Dashboard for Kyna Sports Aggregator"
 
 # Install build dependencies required for native Node.js modules
-# Python3 is needed for node-gyp to compile native extensions (like telegram package)
+# Python3 is needed for node-gyp to compile native extensions
 # make, g++ are needed for C++ compilation
 RUN apk add --no-cache python3 make g++
 
