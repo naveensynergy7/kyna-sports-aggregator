@@ -151,6 +151,26 @@ messageQueue.process('parse-message', async (job) => {
   logger.info(`📝 [Job ${job.id}] Message: "${message.substring(0, 100)}${message.length > 100 ? '...' : ''}"`);
   
   try {
+    // Get current date in Singapore timezone
+    const now = new Date();
+    const singaporeDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Singapore' }));
+    const currentDate = singaporeDate.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    const currentDay = singaporeDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Singapore' });
+    const currentYear = singaporeDate.getFullYear();
+    
+    // Build context-aware prompt
+    const contextualPrompt = `${FOOTBALL_EXTRACTION_PROMPT}
+
+IMPORTANT DATE CONTEXT:
+- Current date: ${currentDate} (${currentDay})
+- Year: ${currentYear}
+- Timezone: Singapore (SGT, UTC+8)
+- When the message says "this Sunday", "tomorrow", "next week", calculate the actual date based on the current date above.
+- If only day of week is mentioned (e.g., "Sunday"), assume it's the next occurrence of that day from the current date.
+- ALWAYS return dates in DD/MM/YYYY format using the current year ${currentYear}.
+
+Message to analyze: ${message}`;
+    
     logger.info(`🤖 [Job ${job.id}] Calling OpenAI API...`);
     
     // Call OpenAI API to extract football data
@@ -159,11 +179,11 @@ messageQueue.process('parse-message', async (job) => {
       messages: [
         {
           role: "system",
-          content: "You are a football match data extraction AI. Extract structured information from football-related messages and return only valid JSON."
+          content: "You are a football match data extraction AI. Extract structured information from football-related messages and return only valid JSON. You have access to the current date and should correctly interpret relative dates like 'tomorrow', 'this Sunday', etc."
         },
         {
           role: "user",
-          content: FOOTBALL_EXTRACTION_PROMPT + message
+          content: contextualPrompt
         }
       ],
       temperature: 0.1,
@@ -228,6 +248,9 @@ async function saveParsedMessage(data) {
   try {
     logger.info(`🔗 Database connection acquired`);
     
+    // Helper function to convert undefined to null
+    const toNull = (value) => (value === undefined || value === 'null' ? null : value);
+    
     await connection.execute(`
       INSERT INTO football_matches (
         original_message, platform, entry, location, date, time, game_type, 
@@ -237,17 +260,17 @@ async function saveParsedMessage(data) {
     `, [
       originalMessage,
       platform,
-      extractedData.entry,
-      extractedData.location,
-      extractedData.date,
-      extractedData.time,
-      extractedData.gameType,
-      extractedData.requirement,
-      extractedData.otherDetails,
-      contactUrl || extractedData.contactUrl,
-      extractedData.matchDuration,
-      extractedData.matchPace,
-      extractedData.confidence
+      toNull(extractedData.entry),
+      toNull(extractedData.location),
+      toNull(extractedData.date),
+      toNull(extractedData.time),
+      toNull(extractedData.gameType),
+      toNull(extractedData.requirement),
+      toNull(extractedData.otherDetails),
+      toNull(contactUrl || extractedData.contactUrl),
+      toNull(extractedData.matchDuration),
+      toNull(extractedData.matchPace),
+      extractedData.confidence || 0
     ]);
     
     logger.info(`💾 Successfully saved to database`, {
