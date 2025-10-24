@@ -90,8 +90,8 @@ Extract the following information if available:
 
 Entry – any amount or "free" (e.g., "$10", "free", "50 rupees", "no cost")
 Location/Venue – where the match will take place
-Date – extract date in DD/MM/YYYY format
-Time – extract time in HH:MM format, 24-hour format
+Date – extract date in YYYY-MM-DD format (MySQL DATE format)
+Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
 Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". Data extracted should be something similar as 5v5, 7v7, 11v11, 3v3. Do not use the full description.
 Requirement – if the message specifically asks for 1, 2, or a few players, or a specific role (like "keeper"), put it here. Otherwise, null.
 Other Details – any additional information not captured in the above fields, e.g. equipment provided, special rules, etc.
@@ -103,8 +103,8 @@ Return ONLY this JSON structure (no markdown, no code blocks, no extra text):
 {
 "entry": "<extracted entry value or null>",
 "location": "<extracted location or null>",
-"date": "<extracted date in DD/MM/YYYY format or null>",
-"time": "<extracted time in HH:MM format or null>",
+"date": "<extracted date in YYYY-MM-DD format or null>",
+"time": "<extracted time in HH:MM:SS format or null>",
 "gameType": "<extracted game type or null>",
 "requirement": "<extracted requirement or null>",
 "otherDetails": "<extracted other details or null>",
@@ -132,8 +132,8 @@ Additional instructions:
 
 Always expand game type to a clear descriptive format if teams and number of players are mentioned.
 If the relevant data cannot be parsed, default answer can be "DM to clarify".
-Use 24-hour format for time.
-Use full DD/MM/YYYY format for date.
+Use 24-hour format for time in HH:MM:SS format (e.g., "13:00:00" for 1pm, "18:30:00" for 6:30pm).
+Use YYYY-MM-DD format for date (e.g., "2025-10-27" for 27th October 2025).
 Use requirement for messages requesting specific player(s) or role(s).
 Use otherDetails for any extra info like match duration, equipment provided, special rules, etc.
 Always provide a confidence score (0–1) indicating how sure you are that the extracted information is correct.
@@ -154,7 +154,7 @@ messageQueue.process('parse-message', async (job) => {
     // Get current date in Singapore timezone
     const now = new Date();
     const singaporeDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Singapore' }));
-    const currentDate = singaporeDate.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    const currentDate = singaporeDate.toISOString().split('T')[0]; // YYYY-MM-DD format
     const currentDay = singaporeDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Singapore' });
     const currentYear = singaporeDate.getFullYear();
     
@@ -167,7 +167,8 @@ IMPORTANT DATE CONTEXT:
 - Timezone: Singapore (SGT, UTC+8)
 - When the message says "this Sunday", "tomorrow", "next week", calculate the actual date based on the current date above.
 - If only day of week is mentioned (e.g., "Sunday"), assume it's the next occurrence of that day from the current date.
-- ALWAYS return dates in DD/MM/YYYY format using the current year ${currentYear}.
+- ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format) using the current year ${currentYear}.
+- ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
 
 Message to analyze: ${message}`;
     

@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS football_matches (
     platform VARCHAR(50) NOT NULL,
     entry VARCHAR(100),
     location VARCHAR(500),                             -- Increased to 500 chars (enough for 50+ words)
-    date VARCHAR(20),                                  -- Store as string in DD/MM/YYYY format
-    time VARCHAR(10),                                  -- Store as string in HH:MM format
+    date DATE,                                         -- Date in MySQL DATE format (YYYY-MM-DD)
+    time TIME,                                         -- Time in MySQL TIME format (HH:MM:SS)
     game_type VARCHAR(500),                            -- Increased to 500 chars (enough for 50+ words)
     requirement TEXT,                                  -- Requirements or conditions for the game
     other_details TEXT,                                -- Any additional details about the match
