@@ -1,0 +1,8 @@
+{
+  "watch": ["app.js", "views/**/*.ejs"],
+  "ext": "js,json,ejs",
+  "ignore": ["node_modules/**"],
+  "delay": 1000,
+  "verbose": true
+}
+

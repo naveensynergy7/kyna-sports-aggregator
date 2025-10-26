@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Featured Games</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        /* Filter Icon */
+        .filter-icon {
+            width: 40px;
+            height: 40px;
+            background: #000;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .filter-icon:hover {
+            transform: scale(1.1);
+            background: #333;
+        }
+
+        .filter-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* Filter Sidebar */
+        .filter-sidebar {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 320px;
+            max-width: 90%;
+            height: 100vh;
+            background: #fff;
+            box-shadow: -2px 0 20px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .filter-sidebar.active {
+            right: 0;
+        }
+
+        .filter-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .filter-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .filter-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+        }
+
+        .filter-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #000;
+            margin: 0;
+        }
+
+        .filter-close {
+            width: 32px;
+            height: 32px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #666;
+            transition: color 0.2s ease;
+        }
+
+        .filter-close:hover {
+            color: #000;
+        }
+
+        .filter-content {
+            padding: 20px;
+        }
+
+        .filter-group {
+            margin-bottom: 24px;
+        }
+
+        .filter-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 8px;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 12px;
+            font-size: 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .filter-actions {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-filter-apply,
+        .btn-filter-clear {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-filter-apply {
+            background: #000;
+            color: #fff;
+        }
+
+        .btn-filter-apply:hover {
+            background: #333;
+        }
+
+        .btn-filter-clear {
+            background: #f5f5f5;
+            color: #000;
+        }
+
+        .btn-filter-clear:hover {
+            background: #e0e0e0;
+        }
+
+        /* Active filter indicator */
+        .filter-icon.has-filters {
+            background: #e63946;
+        }
+
+        .filter-icon.has-filters::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        /* Update header to flex layout */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Filter Overlay -->
+    <div class="filter-overlay" id="filterOverlay"></div>
+
+    <!-- Filter Sidebar -->
+    <div class="filter-sidebar" id="filterSidebar">
+        <div class="filter-header">
+            <h2 class="filter-title">Filters</h2>
+            <button class="filter-close" id="filterClose">&times;</button>
+        </div>
+
+        <form method="GET" action="/">
+            <div class="filter-content">
+                <div class="filter-group">
+                    <label class="filter-label" for="date">Date</label>
+                    <select name="date" id="date" class="filter-select">
+                        <option value="">All Dates</option>
+                        <% availableDates.forEach(date => { %>
+                            <option value="<%= date %>" <%= filters.date === date ? 'selected' : '' %>>
+                                <%= date %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label" for="time">Time</label>
+                    <select name="time" id="time" class="filter-select">
+                        <option value="">All Times</option>
+                        <% availableTimes.forEach(time => { %>
+                            <option value="<%= time %>" <%= filters.time === time ? 'selected' : '' %>>
+                                <%= time %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label" for="gameType">Game Type</label>
+                    <select name="gameType" id="gameType" class="filter-select">
+                        <option value="">All Game Types</option>
+                        <% availableGameTypes.forEach(gameType => { %>
+                            <option value="<%= gameType %>" <%= filters.gameType === gameType ? 'selected' : '' %>>
+                                <%= gameType %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn-filter-apply">Apply</button>
+                <a href="/" class="btn-filter-clear" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 class="page-title">Featured Games</h1>
+            <!-- Filter Icon -->
+            <button class="filter-icon <%= (filters.date || filters.time || filters.gameType) ? 'has-filters' : '' %>" id="filterIcon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+                </svg>
+            </button>
+        </header>
+
+        <main>
+            <!-- Info Text -->
+            <div class="info-text">
+                <p>Games are listed in chronological order as they were posted.</p>
+                <p>Use the advanced filters for easier searching.</p>
+            </div>
+
+            <!-- Games Container -->
+            <div id="games-container">
+                <!-- Cards will be loaded dynamically via JavaScript -->
+            </div>
+
+            <!-- Loading indicator -->
+            <div id="loading" style="text-align: center; padding: 20px; display: none;">
+                <p style="color: #666;">Loading more matches...</p>
+            </div>
+
+            <!-- End message -->
+            <div id="end-message" style="text-align: center; padding: 20px; display: none;">
+                <p style="color: #666;">No more matches to load.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const filterIcon = document.getElementById('filterIcon');
+        const filterSidebar = document.getElementById('filterSidebar');
+        const filterOverlay = document.getElementById('filterOverlay');
+        const filterClose = document.getElementById('filterClose');
+        const gamesContainer = document.getElementById('games-container');
+        const loading = document.getElementById('loading');
+        const endMessage = document.getElementById('end-message');
+
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMore = true;
+
+        // Get current filters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const filters = {
+            date: urlParams.get('date') || '',
+            time: urlParams.get('time') || '',
+            gameType: urlParams.get('gameType') || ''
+        };
+
+        function openFilters() {
+            filterSidebar.classList.add('active');
+            filterOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFilters() {
+            filterSidebar.classList.remove('active');
+            filterOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        filterIcon.addEventListener('click', openFilters);
+        filterClose.addEventListener('click', closeFilters);
+        filterOverlay.addEventListener('click', closeFilters);
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'Date TBD';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-SG');
+        }
+
+        // Create match card HTML
+        function createMatchCard(match) {
+            const hasTag = match.requirement || match.game_type;
+            
+            return `
+                <div class="game-card">
+                    ${hasTag ? `
+                    <div class="card-tag competitive">
+                        <span>${match.requirement ? 'LOOKING FOR: ' + match.requirement.toUpperCase() : ''}</span>
+                        <span class="tag-right">${match.game_type ? match.game_type.toUpperCase() : ''}</span>
+                    </div>
+                    ` : ''}
+                    <div class="card-header">
+                        <h2 class="game-title">${match.original_message.trim()}</h2>
+                        <span class="game-price">${match.entry || '$0'}</span>
+                    </div>
+                    <div class="game-details-alt">
+                        <div class="detail-row-group">
+                            <div class="detail-row">
+                                <span class="icon">📅</span>
+                                <span>${formatDate(match.date)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="icon">⏰</span>
+                                <span>${match.time || 'Time TBD'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="icon">📍</span>
+                                <span>${match.location || 'Location TBD'}</span>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn-details" onclick="alert('Details coming soon!')">Details</button>
+                            <a href="${match.contact_url || '#'}" target="_blank" class="btn-contact">Contact</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load matches
+        async function loadMatches() {
+            if (isLoading || !hasMore) return;
+
+            isLoading = true;
+            loading.style.display = 'block';
+
+            try {
+                const params = new URLSearchParams({
+                    page: currentPage,
+                    ...filters
+                });
+
+                const response = await fetch(`/api/matches?${params}`);
+                const data = await response.json();
+
+                if (data.matches && data.matches.length > 0) {
+                    data.matches.forEach(match => {
+                        gamesContainer.insertAdjacentHTML('beforeend', createMatchCard(match));
+                    });
+
+                    hasMore = data.hasMore;
+                    currentPage++;
+
+                    if (!hasMore) {
+                        endMessage.style.display = 'block';
+                    }
+                } else if (currentPage === 1) {
+                    gamesContainer.innerHTML = '<p style="text-align: center; padding: 40px 20px; color: #666;">No matches found. Try adjusting your filters.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading matches:', error);
+                gamesContainer.innerHTML = '<p style="text-align: center; padding: 40px 20px; color: #666;">Error loading matches. Please try again.</p>';
+            } finally {
+                isLoading = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        // Infinite scroll handler - watch main element instead of window
+        const mainElement = document.querySelector('main');
+        mainElement.addEventListener('scroll', () => {
+            if ((mainElement.scrollHeight - mainElement.scrollTop) <= mainElement.clientHeight + 500) {
+                loadMatches();
+            }
+        });
+
+        // Load initial matches
+        loadMatches();
+    </script>
+</body>
+
+</html>
+

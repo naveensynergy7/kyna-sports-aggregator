@@ -110,6 +110,8 @@
                 color: #1e293b;
                 line-height: 1.6;
                 font-size: 0.95rem;
+                white-space: pre-wrap;
+                word-wrap: break-word;
             }
 
             .status-badge {
@@ -338,9 +340,7 @@
         <!-- Original Message -->
         <div class="detail-card">
             <h3><i class="bi bi-chat-left-text"></i> Original Message</h3>
-            <div class="message-box">
-                ${match.original_message}
-            </div>
+            <div class="message-box">${match.original_message.trim()}</div>
         </div>
 
         <!-- Match Information -->
