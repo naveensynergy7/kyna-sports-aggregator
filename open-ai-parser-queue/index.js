@@ -169,6 +169,9 @@ IMPORTANT DATE CONTEXT:
 - If only day of week is mentioned (e.g., "Sunday"), assume it's the next occurrence of that day from the current date.
 - ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format) using the current year ${currentYear}.
 - ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
+- For ambiguous numeric dates like "09/11" or "15/12", use DD/MM format (day/month) as this is used in Singapore.
+- NEVER return a date that is in the past. 
+- For example, if today is ${currentDate} and message says "09/11", interpret as 9th November ${currentYear}.
 
 Message to analyze: ${message}`;
     
