@@ -88,7 +88,7 @@ CRITICAL: Return ONLY the raw JSON object. Do NOT wrap it in markdown code block
 
 Extract the following information if available:
 
-Entry – any amount or "free" (e.g., "$10", "free", "50 rupees", "no cost")
+Entry – any amount or null (e.g., "$10") and if like 8.80-10 dollar each then return highest amount like $10.
 Location/Venue – where the match will take place
 Date – extract date in YYYY-MM-DD format (MySQL DATE format). Date can't be in the past. For numeric dates like "09/11", ALWAYS use DD/MM format (day/month) common in Singapore. So "09/11" = 9th November, "15/12" = 15th December. If the calculated date is in the past, use next year.
 Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
