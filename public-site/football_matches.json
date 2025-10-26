@@ -1,0 +1,82 @@
+[
+    {
+        "matches": [
+            {
+                "id": "1",
+                "original_message": "Any GK wants to play 11aside this Sunday 1pm @ Bartley sec ? PM if interested.",
+                "platform": "telegram",
+                "entry": null,
+                "location": "Bartley sec",
+                "date": "2025-10-26",
+                "time": "13:00:00",
+                "game_type": "11v11",
+                "requirement": "GK",
+                "other_details": null,
+                "contact_url": "https:\/\/web.telegram.org\/k\/#@ggi_fff",
+                "match_duration": null,
+                "match_pace": null,
+                "status": "APPROVED",
+                "confidence": "1.00",
+                "created_at": "2025-10-24 06:14:55",
+                "updated_at": "2025-10-24 06:17:07"
+            },
+            {
+                "id": "3",
+                "original_message": "Looking for 2 female players to join in a mixed-gender team in a tournament on 09\/11 afternoon.\n\nPM if interested. Thanks!",
+                "platform": "telegram",
+                "entry": null,
+                "location": null,
+                "date": "2025-09-11",
+                "time": "12:00:00",
+                "game_type": null,
+                "requirement": "2 female players",
+                "other_details": "mixed-gender team in a tournament",
+                "contact_url": "https:\/\/web.telegram.org\/k\/#@jord_tan",
+                "match_duration": null,
+                "match_pace": null,
+                "status": "PENDING",
+                "confidence": "1.00",
+                "created_at": "2025-10-24 06:21:03",
+                "updated_at": "2025-10-24 06:21:03"
+            },
+            {
+                "id": "4",
+                "original_message": "Any GK and outfield players  wants to play 11aside this Sunday 11am-1pm @ Riverside sec sec ? PM if interested.",
+                "platform": "telegram",
+                "entry": null,
+                "location": "Riverside Secondary School",
+                "date": "2025-10-26",
+                "time": "11:00:00",
+                "game_type": "11v11",
+                "requirement": "Any GK and outfield players",
+                "other_details": null,
+                "contact_url": "https:\/\/web.telegram.org\/k\/#@Darryl34",
+                "match_duration": "120",
+                "match_pace": null,
+                "status": "APPROVED",
+                "confidence": "1.00",
+                "created_at": "2025-10-24 06:30:38",
+                "updated_at": "2025-10-24 06:30:38"
+            },
+            {
+                "id": "5",
+                "original_message": "Looking for:\n1x midfielder and 1x defender for game at serangoon area 1pm this Sunday 26\/10",
+                "platform": "telegram",
+                "entry": null,
+                "location": "serangoon area",
+                "date": "2025-10-26",
+                "time": "13:00:00",
+                "game_type": null,
+                "requirement": "1x midfielder and 1x defender",
+                "other_details": null,
+                "contact_url": "https:\/\/web.telegram.org\/k\/#@stjl_x",
+                "match_duration": null,
+                "match_pace": null,
+                "status": "PENDING",
+                "confidence": "1.00",
+                "created_at": "2025-10-24 06:31:08",
+                "updated_at": "2025-10-24 06:31:08"
+            }
+        ]
+    }
+]
