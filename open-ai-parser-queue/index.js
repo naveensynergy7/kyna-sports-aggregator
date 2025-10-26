@@ -90,7 +90,7 @@ Extract the following information if available:
 
 Entry – any amount or "free" (e.g., "$10", "free", "50 rupees", "no cost")
 Location/Venue – where the match will take place
-Date – extract date in YYYY-MM-DD format (MySQL DATE format)
+Date – extract date in YYYY-MM-DD format (MySQL DATE format). Date can't be in the past. For numeric dates like "09/11", ALWAYS use DD/MM format (day/month) common in Singapore. So "09/11" = 9th November, "15/12" = 15th December. If the calculated date is in the past, use next year.
 Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
 Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". Data extracted should be something similar as 5v5, 7v7, 11v11, 3v3. Do not use the full description.
 Requirement – if the message specifically asks for 1, 2, or a few players, or a specific role (like "keeper"), put it here. Otherwise, null.
@@ -169,9 +169,7 @@ IMPORTANT DATE CONTEXT:
 - If only day of week is mentioned (e.g., "Sunday"), assume it's the next occurrence of that day from the current date.
 - ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format) using the current year ${currentYear}.
 - ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
-- For ambiguous numeric dates like "09/11" or "15/12", use DD/MM format (day/month) as this is used in Singapore.
 - NEVER return a date that is in the past. 
-- For example, if today is ${currentDate} and message says "09/11", interpret as 9th November ${currentYear}.
 
 Message to analyze: ${message}`;
     

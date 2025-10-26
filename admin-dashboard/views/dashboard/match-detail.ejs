@@ -1,0 +1,482 @@
+<%- include('../layouts/main', {
+    title: title,
+    currentPage: 'matches',
+    user: { email: 'admin@kyna.one' },
+    additionalStyles: `
+        <style>
+            .breadcrumb {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 2rem;
+                font-size: 0.875rem;
+                color: #64748b;
+            }
+
+            .breadcrumb a {
+                color: #3b82f6;
+                text-decoration: none;
+                transition: color 0.2s ease;
+            }
+
+            .breadcrumb a:hover {
+                color: #2563eb;
+            }
+
+            .detail-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+                margin-bottom: 2rem;
+            }
+
+            .detail-title {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .match-id {
+                background: #f1f5f9;
+                padding: 0.5rem 1rem;
+                border-radius: 0.5rem;
+                font-size: 1rem;
+                font-weight: 600;
+                color: #64748b;
+            }
+
+            .detail-actions {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .detail-card {
+                background: white;
+                border-radius: 0.75rem;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                padding: 2rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .detail-card h3 {
+                color: #1e293b;
+                font-size: 1.125rem;
+                font-weight: 600;
+                margin-bottom: 1.5rem;
+                padding-bottom: 0.75rem;
+                border-bottom: 2px solid #e2e8f0;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .detail-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+
+            .detail-item {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .detail-label {
+                color: #64748b;
+                font-size: 0.875rem;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.025em;
+            }
+
+            .detail-value {
+                color: #1e293b;
+                font-size: 1rem;
+                font-weight: 500;
+            }
+
+            .detail-value.large {
+                font-size: 1.125rem;
+                line-height: 1.6;
+            }
+
+            .message-box {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.5rem;
+                padding: 1.5rem;
+                color: #1e293b;
+                line-height: 1.6;
+                font-size: 0.95rem;
+            }
+
+            .status-badge {
+                display: inline-block;
+                padding: 0.5rem 1rem;
+                border-radius: 9999px;
+                font-size: 0.875rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.025em;
+            }
+
+            .status-badge.pending {
+                background: #fef3c7;
+                color: #92400e;
+            }
+
+            .status-badge.approved {
+                background: #d1fae5;
+                color: #065f46;
+            }
+
+            .status-badge.rejected {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+
+            .platform-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.5rem 1rem;
+                border-radius: 0.5rem;
+                font-size: 0.875rem;
+                font-weight: 500;
+            }
+
+            .platform-badge.telegram {
+                background: #dbeafe;
+                color: #1e40af;
+            }
+
+            .platform-badge.whatsapp {
+                background: #d1fae5;
+                color: #065f46;
+            }
+
+            .status-form {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                margin-top: 1rem;
+                padding: 1.5rem;
+                background: #f8fafc;
+                border-radius: 0.5rem;
+                border: 1px solid #e2e8f0;
+            }
+
+            .status-form label {
+                font-weight: 600;
+                color: #1e293b;
+                margin: 0;
+            }
+
+            .status-form select {
+                flex: 1;
+                padding: 0.75rem 1rem;
+                border: 1px solid #d1d5db;
+                border-radius: 0.5rem;
+                font-size: 0.875rem;
+                font-weight: 500;
+                background: white;
+                color: #1e293b;
+                transition: all 0.2s ease;
+            }
+
+            .status-form select:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+
+            .btn-update {
+                background: #10b981;
+                border: none;
+                border-radius: 0.5rem;
+                padding: 0.75rem 1.5rem;
+                font-weight: 600;
+                font-size: 0.875rem;
+                color: white;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .btn-update:hover {
+                background: #059669;
+            }
+
+            .btn-delete {
+                background: #ef4444;
+                border: none;
+                border-radius: 0.5rem;
+                padding: 0.75rem 1.5rem;
+                font-weight: 600;
+                font-size: 0.875rem;
+                color: white;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .btn-delete:hover {
+                background: #dc2626;
+            }
+
+            .btn-back {
+                background: #f1f5f9;
+                border: none;
+                border-radius: 0.5rem;
+                padding: 0.75rem 1.5rem;
+                font-weight: 500;
+                font-size: 0.875rem;
+                color: #334155;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                transition: all 0.2s ease;
+            }
+
+            .btn-back:hover {
+                background: #e2e8f0;
+                color: #1e293b;
+            }
+
+            .confidence-display {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .confidence-bar-large {
+                flex: 1;
+                height: 12px;
+                background: #f1f5f9;
+                border-radius: 9999px;
+                overflow: hidden;
+            }
+
+            .confidence-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+                border-radius: 9999px;
+                transition: width 0.3s ease;
+            }
+
+            .confidence-percent {
+                font-weight: 700;
+                font-size: 1.125rem;
+                color: #1e293b;
+            }
+
+            .delete-form {
+                margin-top: 2rem;
+                padding: 1.5rem;
+                background: #fef2f2;
+                border: 1px solid #fecaca;
+                border-radius: 0.5rem;
+            }
+
+            .delete-form h4 {
+                color: #991b1b;
+                font-size: 1rem;
+                font-weight: 600;
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .delete-form p {
+                color: #7f1d1d;
+                font-size: 0.875rem;
+                margin-bottom: 1rem;
+            }
+
+            @media (max-width: 768px) {
+                .detail-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .detail-header {
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .detail-actions {
+                    width: 100%;
+                }
+
+                .status-form {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+            }
+        </style>
+    `,
+    body: `
+        <div class="breadcrumb">
+            <a href="/dashboard/matches"><i class="bi bi-trophy"></i> Matches</a>
+            <span>/</span>
+            <span>Match #${match.id}</span>
+        </div>
+
+        <div class="detail-header">
+            <div class="detail-title">
+                <h1 class="page-title">Match Details</h1>
+                <span class="match-id">#${match.id}</span>
+            </div>
+            <div class="detail-actions">
+                <a href="/dashboard/matches" class="btn-back">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+
+        <!-- Original Message -->
+        <div class="detail-card">
+            <h3><i class="bi bi-chat-left-text"></i> Original Message</h3>
+            <div class="message-box">
+                ${match.original_message}
+            </div>
+        </div>
+
+        <!-- Match Information -->
+        <div class="detail-card">
+            <h3><i class="bi bi-info-circle"></i> Match Information</h3>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Platform</span>
+                    <span class="detail-value">
+                        <span class="platform-badge ${match.platform.toLowerCase()}">
+                            <i class="bi bi-${match.platform.toLowerCase() === 'telegram' ? 'telegram' : 'whatsapp'}"></i>
+                            ${match.platform}
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value">
+                        <span class="status-badge ${match.status.toLowerCase()}">
+                            ${match.status}
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Entry Fee</span>
+                    <span class="detail-value">${match.entry || 'Not specified'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Location</span>
+                    <span class="detail-value">${match.location || 'Not specified'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Date</span>
+                    <span class="detail-value">${match.date ? new Date(match.date).toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Time</span>
+                    <span class="detail-value">${match.time || 'Not specified'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Game Type</span>
+                    <span class="detail-value">${match.game_type || 'Not specified'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Requirement</span>
+                    <span class="detail-value">${match.requirement || 'None'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Match Duration</span>
+                    <span class="detail-value">${match.match_duration ? match.match_duration + ' minutes' : 'Not specified'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Match Pace</span>
+                    <span class="detail-value">${match.match_pace || 'Not specified'}</span>
+                </div>
+            </div>
+
+            ${match.other_details ? `
+                <div style="margin-top: 1.5rem;">
+                    <span class="detail-label">Other Details</span>
+                    <div class="message-box" style="margin-top: 0.5rem;">
+                        ${match.other_details}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${match.contact_url ? `
+                <div style="margin-top: 1.5rem;">
+                    <span class="detail-label">Contact URL</span>
+                    <div style="margin-top: 0.5rem;">
+                        <a href="${match.contact_url}" target="_blank" style="color: #3b82f6; font-weight: 500;">
+                            <i class="bi bi-link-45deg"></i> ${match.contact_url}
+                        </a>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+
+        <!-- AI Confidence Score -->
+        <div class="detail-card">
+            <h3><i class="bi bi-graph-up"></i> AI Confidence Score</h3>
+            <div class="confidence-display">
+                <div class="confidence-bar-large">
+                    <div class="confidence-fill" style="width: ${match.confidence * 100}%"></div>
+                </div>
+                <span class="confidence-percent">${Math.round(match.confidence * 100)}%</span>
+            </div>
+        </div>
+
+        <!-- Timestamps -->
+        <div class="detail-card">
+            <h3><i class="bi bi-clock-history"></i> Timestamps</h3>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Created At</span>
+                    <span class="detail-value">${new Date(match.created_at).toLocaleString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Last Updated</span>
+                    <span class="detail-value">${new Date(match.updated_at).toLocaleString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update Status -->
+        <div class="detail-card">
+            <h3><i class="bi bi-pencil-square"></i> Update Status</h3>
+            <form method="POST" action="/dashboard/matches/${match.id}/status" class="status-form">
+                <label for="status">Change Status:</label>
+                <select name="status" id="status" required>
+                    <option value="PENDING" ${match.status === 'PENDING' ? 'selected' : ''}>Pending</option>
+                    <option value="APPROVED" ${match.status === 'APPROVED' ? 'selected' : ''}>Approved</option>
+                    <option value="REJECTED" ${match.status === 'REJECTED' ? 'selected' : ''}>Rejected</option>
+                </select>
+                <button type="submit" class="btn-update">
+                    <i class="bi bi-check-circle me-1"></i> Update Status
+                </button>
+            </form>
+        </div>
+
+        <!-- Delete Match -->
+        <div class="detail-card">
+            <div class="delete-form">
+                <h4>
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Danger Zone
+                </h4>
+                <p>Once you delete this match, there is no going back. This action cannot be undone.</p>
+                <form method="POST" action="/dashboard/matches/${match.id}/delete" onsubmit="return confirm('Are you sure you want to delete this match? This action cannot be undone.');">
+                    <button type="submit" class="btn-delete">
+                        <i class="bi bi-trash me-1"></i> Delete Match
+                    </button>
+                </form>
+            </div>
+        </div>
+    `,
+    additionalScripts: ``
+}) %>
+
