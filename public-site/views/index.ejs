@@ -39,7 +39,7 @@
             position: fixed;
             top: 0;
             right: -100%;
-            width: 320px;
+            width: 378px;
             max-width: 90%;
             height: 100vh;
             background: #fff;
@@ -111,6 +111,8 @@
 
         .filter-group {
             margin-bottom: 24px;
+            display: flex;
+            gap: 10px;
         }
 
         .filter-label {
@@ -215,26 +217,18 @@
             <div class="filter-content">
                 <div class="filter-group">
                     <label class="filter-label" for="date">Date</label>
-                    <select name="date" id="date" class="filter-select">
-                        <option value="">All Dates</option>
-                        <% availableDates.forEach(date => { %>
-                            <option value="<%= date %>" <%= filters.date === date ? 'selected' : '' %>>
-                                <%= date %>
-                            </option>
-                        <% }); %>
-                    </select>
+             
+                    <input type="date" name="date" id="date" class="filter-select" value="<%= filters.date %>" /> 
+                 
+                    <input type="date" name="enddate" id="enddate" class="filter-select" value="<%= filters.enddate %>"  />
                 </div>
 
                 <div class="filter-group">
                     <label class="filter-label" for="time">Time</label>
-                    <select name="time" id="time" class="filter-select">
-                        <option value="">All Times</option>
-                        <% availableTimes.forEach(time => { %>
-                            <option value="<%= time %>" <%= filters.time === time ? 'selected' : '' %>>
-                                <%= time %>
-                            </option>
-                        <% }); %>
-                    </select>
+              
+                    <input type="time" name="time" id="time"  class="filter-select" value="<%= filters.time %>" />
+               
+                    <input type="time" name="endtime" id="endtime" class="filter-select" value="<%= filters.endtime %>" />
                 </div>
 
                 <div class="filter-group">
@@ -261,7 +255,7 @@
         <header>
             <h1 class="page-title">Featured Games</h1>
             <!-- Filter Icon -->
-            <button class="filter-icon <%= (filters.date || filters.time || filters.gameType) ? 'has-filters' : '' %>" id="filterIcon">
+            <button class="filter-icon <%= (filters.date || filters.enddate || filters.time || filters.endtime ||filters.gameType) ? 'has-filters' : '' %>" id="filterIcon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
                 </svg>
@@ -309,7 +303,9 @@
         const urlParams = new URLSearchParams(window.location.search);
         const filters = {
             date: urlParams.get('date') || '',
+            enddate: urlParams.get('enddate') || '',
             time: urlParams.get('time') || '',
+            endtime: urlParams.get('endtime') || '',
             gameType: urlParams.get('gameType') || ''
         };
 
@@ -385,8 +381,12 @@
 
             try {
                 const params = new URLSearchParams({
-                    page: currentPage,
-                    ...filters
+                   page: currentPage,
+                    date: filters.date,
+                    enddate: filters.enddate,
+                    time: filters.time,
+                    endtime: filters.endtime,
+                    gameType: filters.gameType
                 });
 
                 const response = await fetch(`/api/matches?${params}`);
