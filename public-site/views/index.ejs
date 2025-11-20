@@ -135,6 +135,23 @@
             transition: border-color 0.2s ease;
         }
 
+        .filter-started {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem ;
+        }
+
+        .form-data {
+            display: flex;
+            flex-direction: column;
+            width: 10rem;
+            /* height: 5rem; */
+            justify-content: center;
+            align-items: center;
+            font-size: large;
+            font-weight: 500;
+        }
+
         .filter-select:focus {
             outline: none;
             border-color: #000;
@@ -265,8 +282,20 @@
         <main>
             <!-- Info Text -->
             <div class="info-text">
-                <p>Games are listed in chronological order as they were posted.</p>
-                <p>Use the advanced filters for easier searching.</p>
+                <div class="filter-started">
+
+                    <form class="form-data" method="get" action="/">    
+                        <label for="startedSoon">Sort by Game Day</label>
+                        <select name="startedSoon" id="startedSoon" class="filter-select" >
+                            <option value="">Default</option>
+                            <option value="asc" <%= filters.startedSoon === "asc" ? "selected" : "" %>>Started Soon</option>
+                            <option value="desc" <%= filters.startedSoon === "desc" ? "selected" : "" %>>Started Later</option>
+                        </div>
+                </select>
+
+
+                </form>
+                
             </div>
 
             <!-- Games Container -->
@@ -306,7 +335,8 @@
             enddate: urlParams.get('enddate') || '',
             time: urlParams.get('time') || '',
             endtime: urlParams.get('endtime') || '',
-            gameType: urlParams.get('gameType') || ''
+            gameType: urlParams.get('gameType') || '',
+            startedSoon: urlParams.get('startedSoon') || '',
         };
 
         function openFilters() {
@@ -386,7 +416,8 @@
                     enddate: filters.enddate,
                     time: filters.time,
                     endtime: filters.endtime,
-                    gameType: filters.gameType
+                    gameType: filters.gameType,
+                    startedSoon: filters.startedSoon
                 });
 
                 const response = await fetch(`/api/matches?${params}`);

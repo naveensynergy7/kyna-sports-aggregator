@@ -84,6 +84,16 @@ app.get("/api/matches", async (req, res) => {
       status: "APPROVED",
     };
 
+    const startedSoon = req.query.startedSoon;
+
+    let orderBy = "ORDER BY date ASC, time ASC";
+
+    if (startedSoon === "asc") {
+      orderBy = "ORDER BY date ASC, time ASC";
+    } else if (startedSoon === "desc") {
+      orderBy = "ORDER BY date DESC, time DESC";
+    }
+
     // Build WHERE clause
     let whereConditions = ["status = ?"];
     let queryParams = [filters.status];
@@ -140,7 +150,7 @@ app.get("/api/matches", async (req, res) => {
                 created_at
             FROM football_matches 
             ${whereClause}
-            ORDER BY created_at DESC
+            ${orderBy}
             LIMIT ${limit} OFFSET ${offset}
         `;
 
