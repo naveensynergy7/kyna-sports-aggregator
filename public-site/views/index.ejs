@@ -282,19 +282,21 @@
         <main>
             <!-- Info Text -->
             <div class="info-text">
-                <div class="filter-started">
+         <div class="filter-started">
+    <form class="form-data" method="get" action="/">
+        <label for="startedSoon">Sort by Game Day</label>
+        <select name="startedSoon" id="startedSoon" class="filter-select">
+            <option value="">Default</option>
+            <option value="asc" <%= filters.startedSoon === "asc" ? "selected" : "" %>>
+                Started Soon
+            </option>
+            <option value="desc" <%= filters.startedSoon === "desc" ? "selected" : "" %>>
+                Started Later
+            </option>
+        </select>
+    </form>
+</div>
 
-                    <form class="form-data" method="get" action="/">    
-                        <label for="startedSoon">Sort by Game Day</label>
-                        <select name="startedSoon" id="startedSoon" class="filter-select" >
-                            <option value="">Default</option>
-                            <option value="asc" <%= filters.startedSoon === "asc" ? "selected" : "" %>>Started Soon</option>
-                            <option value="desc" <%= filters.startedSoon === "desc" ? "selected" : "" %>>Started Later</option>
-                        </div>
-                </select>
-
-
-                </form>
                 
             </div>
 
@@ -456,6 +458,10 @@
 
         // Load initial matches
         loadMatches();
+        // Auto-submit sort filter when changed
+document.getElementById("startedSoon").addEventListener("change", function () {
+    this.form.submit();
+});
     </script>
 </body>
 

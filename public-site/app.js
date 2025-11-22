@@ -35,6 +35,7 @@ app.get("/", async (req, res) => {
       time: req.query.time || "",
       endtime: req.query.endtime || "",
       gameType: req.query.gameType || "",
+      startedSoon: req.query.startedSoon || "",
       status: "APPROVED",
     };
 
@@ -81,17 +82,20 @@ app.get("/api/matches", async (req, res) => {
       time: req.query.time || "",
       endtime: req.query.endtime || "",
       gameType: req.query.gameType || "",
+      startedSoon: req.query.startedSoon || "",
       status: "APPROVED",
     };
 
     const startedSoon = req.query.startedSoon;
 
-    let orderBy = "ORDER BY date ASC, time ASC";
+    let orderBy = "";
 
     if (startedSoon === "asc") {
       orderBy = "ORDER BY date ASC, time ASC";
     } else if (startedSoon === "desc") {
       orderBy = "ORDER BY date DESC, time DESC";
+    } else {
+      orderBy = "ORDER BY created_at DESC";
     }
 
     // Build WHERE clause
