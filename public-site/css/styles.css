@@ -20,7 +20,7 @@ body {
 }
 
 .container {
-    max-width: 420px;
+    max-width: 500px;
     width: 100%;
     background-color: #fff;
     height: calc(100vh - 20px);
@@ -124,29 +124,34 @@ main {
     margin: 0;
 }
 
+/* Container that holds price at the top-right */
+.price-wrapper {
+    display: flex;
+    /* flex-direction: column; */
+    align-items: flex-end;
+    /* max-width: 100px; Prevents layout breaking */
+}
+
+/* Price text */
 .game-price {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-}
-
-.contact-price {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-size: 18px;
-    line-height: 1.1;
+    font-size: 28px;
     font-weight: 700;
-}
-
-.price {
-    font-size: 24px;
-    font-weight: 700;
+    color: #000;
     line-height: 1.1;
+    text-align: right;
+
+    /* Automatic text shrink */
+    /* white-space: normal;
+    word-break: break-word;
+    max-width: 100%; 
+    overflow-wrap: break-word; */
 }
 
-
-
+/* If text is REALLY long → shrink slightly */
+.game-price.long {
+    font-size: 16px;
+    display: flex;
+}
 
 .game-details {
     margin-bottom: 12px;

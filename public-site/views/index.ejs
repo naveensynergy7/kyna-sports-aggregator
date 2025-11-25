@@ -372,13 +372,19 @@
                 <div class="game-card">
                     ${hasTag ? `
                     <div class="card-tag competitive">
-                        <span>${match.requirement ? 'LOOKING FOR: ' + match.requirement.toUpperCase() : ''}</span>
+                        <span>${match.requirement ? '' + match.requirement.toUpperCase() : ''}</span>
                         <span class="tag-right">${match.game_type ? match.game_type.toUpperCase() : ''}</span>
                     </div>
                     ` : ''}
-                    <div class="card-header">
+                <div class="card-header">
                         <h2 class="game-title">${match.original_message.trim()}</h2>
-                        <span class="game-price">${match.entry || '$0'}</span>
+                        <div class="price-wrapper">
+                         <span class="game-price ${match.entry && match.entry.length > 12 ? 'long' : ''}">
+                             ${match.entry || ''}
+                           </span>
+                         </div>
+
+
                     </div>
                     <div class="game-details-alt">
                         <div class="detail-row-group">
