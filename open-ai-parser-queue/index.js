@@ -5,7 +5,7 @@ const OpenAI = require("openai");
 const mysql = require("mysql2/promise");
 const Joi = require("joi");
 const winston = require("winston");
-const cron = require("node-cron");
+// const cron = require("node-cron");
 require("dotenv").config();
 
 // Initialize Winston logger
@@ -91,15 +91,31 @@ CRITICAL: Return ONLY the raw JSON object. Do NOT wrap it in markdown code block
 
 Extract the following information if available:
 
-Entry – any amount or null (e.g., "$10") and if like 8.80-10 dollar each then return highest amount like $10.
-Location/Venue – where the match will take place
-Date – extract date in YYYY-MM-DD format (MySQL DATE format). Date can't be in the past. For numeric dates like "09/11", ALWAYS use DD/MM format (day/month) common in Singapore. So "09/11" = 9th November, "15/12" = 15th December. If the calculated date is in the past, use next year.
-Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
-Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". Data extracted should be something similar as 5v5, 7v7, 11v11, 3v3. Do not use the full description.
-Requirement – if the message specifically asks for 1, 2, or a few players, or a specific role (like "keeper"), put it here. Otherwise, null.
-Other Details – any additional information not captured in the above fields, e.g. equipment provided, special rules, etc.
-Match Duration – the duration of the match in minutes. For example, if the message states 7-9pm, duration will be 120 minutes.
-Match Pace – the pace of the game, if mentioned in the message. For example, "fast-paced", "competitive", "chill" etc.
+Entry – any amount or null (e.g., "$10").
+If range like "8.80–10 dollar each," return the highest amount, e.g., "$10".
+If no price is mentioned anywhere in the message, return “Contact for Price” (do NOT return $0).
+Location/Venue – where the match will take place. Location must be fully expanded and capitalised:
+"Sec" → "Secondary School"
+"Pri" → "Primary School"
+"North side" → "North Side"
+Expand similar abbreviations logically.
+Date – extract date in YYYY-MM-DD format (MySQL DATE format).
+Date cannot be in the past.
+For numeric dates like "09/11", ALWAYS interpret as DD/MM (Singapore format) → 9 November, not 11 September.
+If the interpreted date is already past, move to the next year.
+Time – extract time in HH:MM:SS (24-hour format, MySQL TIME format).
+Game Type – e.g. "5v5", "7v7", "11v11", "3v3", "pickup game".
+If teams or player counts are described, convert them to the nearest game-type pattern.
+Requirement – determine what the post is “looking for” using this logic:
+Looking for Players → default for most posts.
+Looking for Goalkeeper → if the message specifically requests a keeper.
+Looking for Opponent → if they request another team.
+Looking for Referee → if they request a ref.
+Looking for Pitch → if they are searching for a field.
+If the post requests a specific number of players (e.g., “need 2 players”), include it here.
+Other Details – any extra information not captured above (rules, equipment, notes, etc.).
+Match Duration – duration of the match in minutes (e.g., "7–9 pm" → 120 minutes).
+Match Pace – fast-paced, competitive, chill, etc., if mentioned.
 
 Return ONLY this JSON structure (no markdown, no code blocks, no extra text):
 
@@ -107,6 +123,7 @@ Return ONLY this JSON structure (no markdown, no code blocks, no extra text):
 "entry": "<extracted entry value or null>",
 "location": "<extracted location or null>",
 "date": "<extracted date in YYYY-MM-DD format or null>",
+"time": "<extracted time in HH:MM:SS format or null>",
 "time": "<extracted time in HH:MM:SS format or null>",
 "gameType": "<extracted game type or null>",
 "requirement": "<extracted requirement or null>",
@@ -131,16 +148,17 @@ If no football-related information is found, return ONLY:
 "matchPace": null
 }
 
-Additional instructions:
+Additional rules:
 
-Always expand game type to a clear descriptive format if teams and number of players are mentioned.
-If the relevant data cannot be parsed, default answer can be "DM to clarify".
-Use 24-hour format for time in HH:MM:SS format (e.g., "13:00:00" for 1pm, "18:30:00" for 6:30pm).
-Use YYYY-MM-DD format for date (e.g., "2025-10-27" for 27th October 2025).
-Use requirement for messages requesting specific player(s) or role(s).
-Use otherDetails for any extra info like match duration, equipment provided, special rules, etc.
-Always provide a confidence score (0–1) indicating how sure you are that the extracted information is correct.
-Use matchPace for the pace of the game, if mentioned in the message. For example, "fast-paced", "competitive", "chill" etc.
+Always expand location abbreviations (Sec → Secondary School, Pri → Primary School, etc.).
+Always interpret dates as DD/MM.
+Always move dates to the future if the interpreted date is in the past.
+Always provide a confidence score (0–1).
+Always output only the JSON object with no explanation.
+If data cannot be parsed, use “DM to clarify”.
+Use matchPace for any described pace (competitive, fast-paced, chill, etc.).
+The AI must automatically detect what the post is looking for using the categories: Players, Goalkeeper, Opponent, Referee, Pitch.
+If the price is missing entirely, set entry to “Contact for Price”.
 
 REMEMBER: Return ONLY the JSON object, nothing else. No markdown formatting, no code blocks, no explanations.
 
@@ -418,11 +436,11 @@ async function deleteOldMatches() {
   }
 }
 
-cron.schedule("*/10 * * * *", () => {
-  logger.info("Running Cron job");
-  console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
-  deleteOldMatches();
-});
+// cron.schedule("*/10 * * * *", () => {
+//   logger.info("Running Cron job");
+//   console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
+//   deleteOldMatches();
+// });
 
 // cron.schedule("* * * * *", () => {
 //   console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
