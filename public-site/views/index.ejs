@@ -231,6 +231,10 @@
         </div>
 
         <form method="GET" action="/">
+            <!-- Preserve sorting when applying filters -->
+            <% if (filters.sorting) { %>
+                <input type="hidden" name="sorting" value="<%= filters.sorting %>" />
+            <% } %>
             <div class="filter-content">
                 <div class="filter-group">
                     <label class="filter-label" for="date">Date</label>
@@ -289,6 +293,22 @@
             <div class="info-text">
                 <div class="filter-started">
                     <form class="form-data" method="get" action="/">
+                        <!-- Preserve all filter values when changing sorting -->
+                        <% if (filters.date) { %>
+                            <input type="hidden" name="date" value="<%= filters.date %>" />
+                        <% } %>
+                        <% if (filters.enddate) { %>
+                            <input type="hidden" name="enddate" value="<%= filters.enddate %>" />
+                        <% } %>
+                        <% if (filters.time) { %>
+                            <input type="hidden" name="time" value="<%= filters.time %>" />
+                        <% } %>
+                        <% if (filters.endtime) { %>
+                            <input type="hidden" name="endtime" value="<%= filters.endtime %>" />
+                        <% } %>
+                        <% if (filters.gameType) { %>
+                            <input type="hidden" name="gameType" value="<%= filters.gameType %>" />
+                        <% } %>
                         <label for="sorting">Sort By</label>
                         <select name="sorting" id="sorting" class="filter-select">
                             <option value="">Default</option>
@@ -345,6 +365,7 @@
             gameType: urlParams.get('gameType') || '',
             sorting: urlParams.get('sorting') || '',
         };
+
 
         function openFilters() {
             filterSidebar.classList.add('active');
