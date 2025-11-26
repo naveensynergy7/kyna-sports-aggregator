@@ -138,7 +138,7 @@
         .filter-started {
             display: flex;
             justify-content: center;
-            margin-bottom: 2rem ;
+            margin-bottom: 2rem;
         }
 
         .form-data {
@@ -234,36 +234,39 @@
             <div class="filter-content">
                 <div class="filter-group">
                     <label class="filter-label" for="date">Date</label>
-             
-                    <input type="date" name="date" id="date" class="filter-select" value="<%= filters.date %>" /> 
-                 
-                    <input type="date" name="enddate" id="enddate" class="filter-select" value="<%= filters.enddate %>"  />
+
+                    <input type="date" name="date" id="date" class="filter-select" value="<%= filters.date %>" />
+
+                    <input type="date" name="enddate" id="enddate" class="filter-select"
+                        value="<%= filters.enddate %>" />
                 </div>
 
                 <div class="filter-group">
                     <label class="filter-label" for="time">Time</label>
-              
-                    <input type="time" name="time" id="time"  class="filter-select" value="<%= filters.time %>" />
-               
-                    <input type="time" name="endtime" id="endtime" class="filter-select" value="<%= filters.endtime %>" />
+
+                    <input type="time" name="time" id="time" class="filter-select" value="<%= filters.time %>" />
+
+                    <input type="time" name="endtime" id="endtime" class="filter-select"
+                        value="<%= filters.endtime %>" />
                 </div>
 
                 <div class="filter-group">
                     <label class="filter-label" for="gameType">Game Type</label>
                     <select name="gameType" id="gameType" class="filter-select">
                         <option value="">All Game Types</option>
-                        <% availableGameTypes.forEach(gameType => { %>
-                            <option value="<%= gameType %>" <%= filters.gameType === gameType ? 'selected' : '' %>>
+                        <% availableGameTypes.forEach(gameType=> { %>
+                            <option value="<%= gameType %>" <%=filters.gameType===gameType ? 'selected' : '' %>>
                                 <%= gameType %>
                             </option>
-                        <% }); %>
+                            <% }); %>
                     </select>
                 </div>
             </div>
 
             <div class="filter-actions">
                 <button type="submit" class="btn-filter-apply">Apply</button>
-                <a href="/" class="btn-filter-clear" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Clear</a>
+                <a href="/" class="btn-filter-clear"
+                    style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Clear</a>
             </div>
         </form>
     </div>
@@ -272,9 +275,11 @@
         <header>
             <h1 class="page-title">Featured Games</h1>
             <!-- Filter Icon -->
-            <button class="filter-icon <%= (filters.date || filters.enddate || filters.time || filters.endtime ||filters.gameType) ? 'has-filters' : '' %>" id="filterIcon">
+            <button
+                class="filter-icon <%= (filters.date || filters.enddate || filters.time || filters.endtime ||filters.gameType) ? 'has-filters' : '' %>"
+                id="filterIcon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+                    <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" />
                 </svg>
             </button>
         </header>
@@ -282,22 +287,22 @@
         <main>
             <!-- Info Text -->
             <div class="info-text">
-         <div class="filter-started">
-    <form class="form-data" method="get" action="/">
-        <label for="startedSoon">Sort by Game Day</label>
-        <select name="startedSoon" id="startedSoon" class="filter-select">
-            <option value="">Default</option>
-            <option value="asc" <%= filters.startedSoon === "asc" ? "selected" : "" %>>
-                Started Soon
-            </option>
-            <option value="desc" <%= filters.startedSoon === "desc" ? "selected" : "" %>>
-                Started Later
-            </option>
-        </select>
-    </form>
-</div>
+                <div class="filter-started">
+                    <form class="form-data" method="get" action="/">
+                        <label for="sorting">Sort By</label>
+                        <select name="sorting" id="sorting" class="filter-select">
+                            <option value="">Default</option>
+                            <option value="asc" <%=filters.sorting==="asc" ? "selected" : "" %>>
+                                Starting Soon
+                            </option>
+                            <option value="desc" <%=filters.sorting==="desc" ? "selected" : "" %>>
+                                Starting Later
+                            </option>
+                        </select>
+                    </form>
+                </div>
 
-                
+
             </div>
 
             <!-- Games Container -->
@@ -338,7 +343,7 @@
             time: urlParams.get('time') || '',
             endtime: urlParams.get('endtime') || '',
             gameType: urlParams.get('gameType') || '',
-            startedSoon: urlParams.get('startedSoon') || '',
+            sorting: urlParams.get('sorting') || '',
         };
 
         function openFilters() {
@@ -367,7 +372,7 @@
         // Create match card HTML
         function createMatchCard(match) {
             const hasTag = match.requirement || match.game_type;
-            
+
             return `
                 <div class="game-card">
                     ${hasTag ? `
@@ -413,13 +418,13 @@
 
             try {
                 const params = new URLSearchParams({
-                   page: currentPage,
+                    page: currentPage,
                     date: filters.date,
                     enddate: filters.enddate,
                     time: filters.time,
                     endtime: filters.endtime,
                     gameType: filters.gameType,
-                    startedSoon: filters.startedSoon
+                    sorting: filters.sorting
                 });
 
                 const response = await fetch(`/api/matches?${params}`);
@@ -459,11 +464,10 @@
         // Load initial matches
         loadMatches();
         // Auto-submit sort filter when changed
-document.getElementById("startedSoon").addEventListener("change", function () {
-    this.form.submit();
-});
+        document.getElementById("sorting").addEventListener("change", function () {
+            this.form.submit();
+        });
     </script>
 </body>
 
 </html>
-

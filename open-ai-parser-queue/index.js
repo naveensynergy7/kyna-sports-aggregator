@@ -5,7 +5,6 @@ const OpenAI = require("openai");
 const mysql = require("mysql2/promise");
 const Joi = require("joi");
 const winston = require("winston");
-const cron = require("node-cron");
 require("dotenv").config();
 
 // Initialize Winston logger
@@ -418,11 +417,13 @@ async function deleteOldMatches() {
   }
 }
 
-cron.schedule("*/10 * * * *", () => {
-  logger.info("Running Cron job");
-  console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
-  deleteOldMatches();
-});
+// Cron job removed - node-cron dependency was removed
+// If you need scheduled tasks, consider using a different scheduler or Bull queue's built-in scheduling
+// cron.schedule("*/10 * * * *", () => {
+//   logger.info("Running Cron job");
+//   console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
+//   deleteOldMatches();
+// });
 
 // cron.schedule("* * * * *", () => {
 //   console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
