@@ -132,6 +132,11 @@ main {
     line-height: 1;
 }
 
+.game-price.empty-price {
+    font-size: 24px;
+    max-width: 100px;
+}
+
 .game-details {
     margin-bottom: 12px;
 }

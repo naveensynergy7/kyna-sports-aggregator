@@ -91,11 +91,47 @@ CRITICAL: Return ONLY the raw JSON object. Do NOT wrap it in markdown code block
 Extract the following information if available:
 
 Entry – any amount or null (e.g., "$10") and if like 8.80-10 dollar each then return highest amount like $10.
-Location/Venue – where the match will take place
-Date – extract date in YYYY-MM-DD format (MySQL DATE format). Date can't be in the past. For numeric dates like "09/11", ALWAYS use DD/MM format (day/month) common in Singapore. So "09/11" = 9th November, "15/12" = 15th December. If the calculated date is in the past, use next year.
+Location/Venue – where the match will take place. CRITICAL LOCATION FORMATTING RULES (Singapore-specific):
+1. Expand all abbreviations to full words:
+   - "Sec" → "Secondary School"
+   - "Pri" → "Primary School"
+   - "St" → "Street" or "Saint" (use context)
+   - "Ave" → "Avenue"
+   - "Blvd" → "Boulevard"
+   - "Rd" → "Road"
+   - "Jln" → "Jalan"
+   - "Lor" → "Lorong"
+   - "Cres" → "Crescent"
+   - "Dr" → "Drive"
+   - Any other abbreviations should be expanded to their full form
+2. Use proper capitalization (Title Case for proper nouns and place names in Singapore):
+   - "North side" → "North Side"
+   - "East coast" → "East Coast"
+   - "West side" → "West Side"
+   - "South side" → "South Side"
+   - "Paya lebar" → "Paya Lebar"
+   - "Eunos" → "Eunos" (already correct)
+   - "Jurong" → "Jurong"
+   - "Tampines" → "Tampines"
+   - "Woodlands" → "Woodlands"
+   - Capitalize all significant words in location names following Singapore naming conventions
+3. Keep the full address/venue name as provided, but ensure abbreviations are expanded and capitalization follows Singapore standards.
+Date – extract date in YYYY-MM-DD format (MySQL DATE format). CRITICAL DATE PARSING RULES:
+1. For numeric dates (e.g., "09/11", "15/12"), ALWAYS interpret as DD/MM format (day/month), NOT MM/DD. This is the standard format in Singapore.
+   - "09/11" = 9th November (NOT 11th September)
+   - "15/12" = 15th December (NOT 12th January)
+   - "28/11" = 28th November
+2. Dates MUST always be in the future. Players don't post games that are already in the past.
+3. If a calculated date would be in the past based on the current date, automatically use the next year.
+4. Think logically: If today is 27th November 2025 and you see "09/11", that would be 9th November 2025 which is in the past, so use 9th November 2026 instead.
+5. Always validate that the extracted date is in the future before returning it.
 Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
-Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". Data extracted should be something similar as 5v5, 7v7, 11v11, 3v3. Do not use the full description.
-Requirement – if the message specifically asks for 1, 2, or a few players, or a specific role (like "keeper"), put it here. Otherwise, null.
+Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". IMPORTANT: 
+- Valid formats: "3v3", "5v5", "7v7", "11v11", "pickup game", or null if unclear
+- 1v1 is NOTHING - it does not exist as a football game format. NEVER use "1v1" under any circumstances.
+- If the number of players is unclear or not mentioned, return null instead of guessing
+- Data extracted should be something similar as 5v5, 7v7, 11v11, 3v3. Do not use the full description.
+Requirement (Looking For) – This field indicates what the post is looking for. It MUST be one of these categories: "Players", "Goalkeeper", "Opponent", "Referee", or "Pitch". IMPORTANT: "Players" is the DEFAULT for most cases. Use "Players" when the message is looking for players (e.g., "looking for players", "need players", "slot available", "need X more players"). Only use other categories when specifically mentioned: "Goalkeeper" (if specifically asking for a keeper/GK), "Opponent" (if looking for another team to play against), "Referee" (if looking for a referee), "Pitch" (if looking to rent/share a pitch). For football-related posts, this field should NEVER be null - default to "Players" if unclear.
 Other Details – any additional information not captured in the above fields, e.g. equipment provided, special rules, etc.
 Match Duration – the duration of the match in minutes. For example, if the message states 7-9pm, duration will be 120 minutes.
 Match Pace – the pace of the game, if mentioned in the message. For example, "fast-paced", "competitive", "chill" etc.
@@ -130,13 +166,17 @@ If no football-related information is found, return ONLY:
 "matchPace": null
 }
 
+Note: For football-related posts, requirement should always be set to one of: "Players", "Goalkeeper", "Opponent", "Referee", or "Pitch". Default to "Players" if not explicitly stated otherwise.
+
 Additional instructions:
 
-Always expand game type to a clear descriptive format if teams and number of players are mentioned.
+Always expand game type to a clear descriptive format if teams and number of players are mentioned. 1v1 is NOTHING - it does not exist. NEVER use "1v1" under any circumstances. If unsure about player count, return null instead of guessing.
 If the relevant data cannot be parsed, default answer can be "DM to clarify".
+For location (Singapore-specific): Expand all abbreviations (Sec → Secondary School, Pri → Primary School, Jln → Jalan, Lor → Lorong, etc.) and use proper capitalization following Singapore naming conventions (Title Case for place names: "North side" → "North Side", "Paya lebar" → "Paya Lebar", "East coast" → "East Coast").
 Use 24-hour format for time in HH:MM:SS format (e.g., "13:00:00" for 1pm, "18:30:00" for 6:30pm).
 Use YYYY-MM-DD format for date (e.g., "2025-10-27" for 27th October 2025).
-Use requirement for messages requesting specific player(s) or role(s).
+For numeric dates, ALWAYS use DD/MM format: "09/11" = 9th November (NOT 11th September). If the calculated date is in the past, automatically use next year - players don't post games that have already happened.
+Use requirement field to indicate what the post is looking for: "Players" (default), "Goalkeeper", "Opponent", "Referee", or "Pitch". For football-related posts, requirement should NEVER be null - always default to "Players" if the message doesn't explicitly state otherwise.
 Use otherDetails for any extra info like match duration, equipment provided, special rules, etc.
 Always provide a confidence score (0–1) indicating how sure you are that the extracted information is correct.
 Use matchPace for the pace of the game, if mentioned in the message. For example, "fast-paced", "competitive", "chill" etc.
@@ -176,13 +216,20 @@ messageQueue.process("parse-message", async (job) => {
 
 IMPORTANT DATE CONTEXT:
 - Current date: ${currentDate} (${currentDay})
-- Year: ${currentYear}
+- Current year: ${currentYear}
 - Timezone: Singapore (SGT, UTC+8)
-- When the message says "this Sunday", "tomorrow", "next week", calculate the actual date based on the current date above.
-- If only day of week is mentioned (e.g., "Sunday"), assume it's the next occurrence of that day from the current date.
-- ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format) using the current year ${currentYear}.
-- ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
-- NEVER return a date that is in the past. 
+
+CRITICAL DATE PARSING RULES:
+1. For numeric dates (e.g., "09/11", "28/11"), ALWAYS use DD/MM format (day/month), NOT MM/DD.
+   - Example: "09/11" = 9th November, NOT 11th September
+   - Example: "28/11" = 28th November
+2. Dates MUST be in the future. If a date would be in the past, automatically use next year (${currentYear + 1}).
+3. Logic check: Compare the extracted date with current date ${currentDate}. If extracted date < current date, add 1 year.
+4. When the message says "this Sunday", "tomorrow", "next week", calculate the actual date based on the current date above.
+5. If only day of week is mentioned (e.g., "Sunday"), assume it's the next occurrence of that day from the current date.
+6. ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format).
+7. ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
+8. NEVER return a date that is in the past - players don't post games that have already happened. 
 
 Message to analyze: ${message}`;
 
@@ -209,6 +256,31 @@ Message to analyze: ${message}`;
     logger.info(`✅ [Job ${job.id}] OpenAI API response received`);
 
     const extractedData = JSON.parse(completion.choices[0].message.content);
+    
+    // Validate and fix date if it's in the past
+    if (extractedData.date && extractedData.confidence > 0) {
+      const extractedDate = new Date(extractedData.date);
+      const today = new Date(currentDate);
+      today.setHours(0, 0, 0, 0);
+      extractedDate.setHours(0, 0, 0, 0);
+      
+      if (extractedDate < today) {
+        // Date is in the past, add one year
+        const nextYear = extractedDate.getFullYear() + 1;
+        extractedDate.setFullYear(nextYear);
+        const newDateStr = extractedDate.toISOString().split('T')[0];
+        logger.info(`🔄 [Job ${job.id}] Date ${extractedData.date} was in the past, adjusted to ${newDateStr}`);
+        extractedData.date = newDateStr;
+      }
+    }
+    
+    // Default requirement to "Players" if null/empty for football-related posts
+    // Valid categories: "Players", "Goalkeeper", "Opponent", "Referee", "Pitch"
+    if (extractedData.confidence > 0 && (!extractedData.requirement || extractedData.requirement === null || extractedData.requirement.trim() === "")) {
+      extractedData.requirement = "Players";
+      logger.info(`🔄 [Job ${job.id}] Defaulted requirement to "Players"`);
+    }
+    
     logger.info(`📊 [Job ${job.id}] Extracted data:`, { extractedData });
 
     // Save to database
@@ -385,50 +457,49 @@ app.post("/parse", async (req, res) => {
   }
 });
 
-// app.get("/delete-matches", async (req, res) => {
-//   try {
-//     const query = `
-//             DELETE FROM football_matches
-//             WHERE TIMESTAMP(date, time) <= DATE_SUB(NOW(), INTERVAL -2 HOUR)
-//             `;
-//     const [result] = await dbPool.execute(query);
-//     res.json({
-//       message: "Deleted matches 2 hours before match time",
-//       deleted: result.affectedRows,
-//     });
-//   } catch (error) {
-//     console.error("Delete before 2 hours error:", error);
-//     res.status(500).json({ error: "Failed to delete matches" });
-//   }
-// });
-
-async function deleteOldMatches() {
+// API endpoint to delete expired matches (for cron jobs)
+// Deletes matches that are within 2 hours of their start time (or have passed)
+// Also deletes matches with only date (no time) if the date has passed
+app.get("/delete-expired-matches", async (req, res) => {
   try {
+    // Delete matches in two scenarios:
+    // 1. Matches with both date and time: delete if game time is within 2 hours (or has passed)
+    //    This means: if game is at 8pm, delete it at 6pm (2 hours before)
+    // 2. Matches with only date (no time): delete if the date has passed
     const query = `
             DELETE FROM football_matches
-            WHERE TIMESTAMP(date, time) <= DATE_SUB(NOW(), INTERVAL -2 HOUR)
+            WHERE date IS NOT NULL 
+            AND (
+              -- Case 1: Has both date and time - delete if within 2 hours of start time
+              (time IS NOT NULL AND TIMESTAMP(date, time) <= DATE_ADD(NOW(), INTERVAL 2 HOUR))
+              OR
+              -- Case 2: Has only date (no time) - delete if date has passed
+              (time IS NULL AND date < CURDATE())
+            )
             `;
     const [result] = await dbPool.execute(query);
-    logger.info(`Cron: Deleted ${result.affectedRows} matches`);
+    
+    logger.info(`🗑️ Deleted ${result.affectedRows} expired matches`);
+    
+    res.json({
+      success: true,
+      message: "Expired matches deleted successfully",
+      deleted: result.affectedRows,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
-    logger.error(`Cron: Error while deleting matches`, {
+    logger.error(`❌ Error deleting expired matches:`, {
       error: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete expired matches",
+      message: error.message,
     });
   }
-}
+});
 
-// Cron job removed - node-cron dependency was removed
-// If you need scheduled tasks, consider using a different scheduler or Bull queue's built-in scheduling
-// cron.schedule("*/10 * * * *", () => {
-//   logger.info("Running Cron job");
-//   console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
-//   deleteOldMatches();
-// });
-
-// cron.schedule("* * * * *", () => {
-//   console.log("🔥 CRON TRIGGERED at", new Date().toISOString());
-//   deleteOldMatches();
-// });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {

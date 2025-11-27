@@ -34,7 +34,9 @@ app.get("/", async (req, res) => {
       enddate: req.query.enddate || "",
       time: req.query.time || "",
       endtime: req.query.endtime || "",
+      day: req.query.day || "",
       gameType: req.query.gameType || "",
+      requirement: req.query.requirement || "",
       sorting: req.query.sorting || "",
       status: "APPROVED",
     };
@@ -46,8 +48,19 @@ app.get("/", async (req, res) => {
     const [times] = await dbPool.query(
       'SELECT DISTINCT time FROM football_matches WHERE time IS NOT NULL AND status = "APPROVED" ORDER BY time LIMIT 50'
     );
+    // Only show specific game types: 5v5, 6v6, 7v7, 8v8, 9v9, 11v11
+    const allowedGameTypes = ['5v5', '6v6', '7v7', '8v8', '9v9', '11v11'];
     const [gameTypes] = await dbPool.query(
-      'SELECT DISTINCT game_type FROM football_matches WHERE game_type IS NOT NULL AND status = "APPROVED" ORDER BY game_type LIMIT 50'
+      `SELECT DISTINCT game_type FROM football_matches 
+       WHERE game_type IS NOT NULL 
+       AND status = "APPROVED" 
+       AND game_type IN (?)
+       ORDER BY FIELD(game_type, '5v5', '6v6', '7v7', '8v8', '9v9', '11v11')`
+      , [allowedGameTypes]
+    );
+    // Get unique requirement values (Looking For) from database
+    const [requirements] = await dbPool.query(
+      'SELECT DISTINCT requirement FROM football_matches WHERE requirement IS NOT NULL AND status = "APPROVED" ORDER BY requirement'
     );
 
     // Format dates to YYYY-MM-DD
@@ -56,11 +69,17 @@ app.get("/", async (req, res) => {
       return date.toISOString().split("T")[0];
     });
 
+    // Filter game types to only include allowed values
+    const filteredGameTypes = gameTypes
+      .map((g) => g.game_type)
+      .filter((gt) => allowedGameTypes.includes(gt));
+
     res.render("index", {
       filters: filters,
       availableDates: formattedDates,
       availableTimes: times.map((t) => t.time),
-      availableGameTypes: gameTypes.map((g) => g.game_type),
+      availableGameTypes: filteredGameTypes,
+      availableRequirements: requirements.map((r) => r.requirement),
     });
   } catch (error) {
     console.error("Error fetching matches:", error);
@@ -81,7 +100,9 @@ app.get("/api/matches", async (req, res) => {
       enddate: req.query.enddate || "",
       time: req.query.time || "",
       endtime: req.query.endtime || "",
+      day: req.query.day || "",
       gameType: req.query.gameType || "",
+      requirement: req.query.requirement || "",
       sorting: req.query.sorting || "",
       status: "APPROVED",
     };
@@ -123,9 +144,34 @@ app.get("/api/matches", async (req, res) => {
       whereConditions.push("time <= ?");
       queryParams.push(filters.endtime);
     }
-    if (filters.gameType) {
+    
+    // Filter by day of week (Monday=1, Tuesday=2, ..., Sunday=7 in MySQL DAYOFWEEK)
+    // MySQL DAYOFWEEK: 1=Sunday, 2=Monday, 3=Tuesday, 4=Wednesday, 5=Thursday, 6=Friday, 7=Saturday
+    const dayMap = {
+      'Monday': 2,
+      'Tuesday': 3,
+      'Wednesday': 4,
+      'Thursday': 5,
+      'Friday': 6,
+      'Saturday': 7,
+      'Sunday': 1
+    };
+    if (filters.day && dayMap[filters.day]) {
+      whereConditions.push("date IS NOT NULL AND DAYOFWEEK(date) = ?");
+      queryParams.push(dayMap[filters.day]);
+    }
+    
+    // Only filter by allowed game types
+    const allowedGameTypes = ['5v5', '6v6', '7v7', '8v8', '9v9', '11v11'];
+    if (filters.gameType && allowedGameTypes.includes(filters.gameType)) {
       whereConditions.push("game_type = ?");
       queryParams.push(filters.gameType);
+    }
+    
+    // Filter by requirement (Looking For)
+    if (filters.requirement) {
+      whereConditions.push("requirement = ?");
+      queryParams.push(filters.requirement);
     }
 
     const whereClause = "WHERE " + whereConditions.join(" AND ");

@@ -112,7 +112,7 @@
         .filter-group {
             margin-bottom: 24px;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
         }
 
         .filter-label {
@@ -121,6 +121,11 @@
             font-weight: 600;
             color: #000;
             margin-bottom: 8px;
+        }
+
+        .filter-inputs-row {
+            display: flex;
+            gap: 10px;
         }
 
         .filter-select {
@@ -238,20 +243,34 @@
             <div class="filter-content">
                 <div class="filter-group">
                     <label class="filter-label" for="date">Date</label>
-
-                    <input type="date" name="date" id="date" class="filter-select" value="<%= filters.date %>" />
-
-                    <input type="date" name="enddate" id="enddate" class="filter-select"
-                        value="<%= filters.enddate %>" />
+                    <div class="filter-inputs-row">
+                        <input type="date" name="date" id="date" class="filter-select" value="<%= filters.date %>" />
+                        <input type="date" name="enddate" id="enddate" class="filter-select"
+                            value="<%= filters.enddate %>" />
+                    </div>
                 </div>
 
                 <div class="filter-group">
                     <label class="filter-label" for="time">Time</label>
+                    <div class="filter-inputs-row">
+                        <input type="time" name="time" id="time" class="filter-select" value="<%= filters.time %>" />
+                        <input type="time" name="endtime" id="endtime" class="filter-select"
+                            value="<%= filters.endtime %>" />
+                    </div>
+                </div>
 
-                    <input type="time" name="time" id="time" class="filter-select" value="<%= filters.time %>" />
-
-                    <input type="time" name="endtime" id="endtime" class="filter-select"
-                        value="<%= filters.endtime %>" />
+                <div class="filter-group">
+                    <label class="filter-label" for="day">Day</label>
+                    <select name="day" id="day" class="filter-select">
+                        <option value="">All Days</option>
+                        <option value="Monday" <%=filters.day==="Monday" ? 'selected' : '' %>>Monday</option>
+                        <option value="Tuesday" <%=filters.day==="Tuesday" ? 'selected' : '' %>>Tuesday</option>
+                        <option value="Wednesday" <%=filters.day==="Wednesday" ? 'selected' : '' %>>Wednesday</option>
+                        <option value="Thursday" <%=filters.day==="Thursday" ? 'selected' : '' %>>Thursday</option>
+                        <option value="Friday" <%=filters.day==="Friday" ? 'selected' : '' %>>Friday</option>
+                        <option value="Saturday" <%=filters.day==="Saturday" ? 'selected' : '' %>>Saturday</option>
+                        <option value="Sunday" <%=filters.day==="Sunday" ? 'selected' : '' %>>Sunday</option>
+                    </select>
                 </div>
 
                 <div class="filter-group">
@@ -261,6 +280,18 @@
                         <% availableGameTypes.forEach(gameType=> { %>
                             <option value="<%= gameType %>" <%=filters.gameType===gameType ? 'selected' : '' %>>
                                 <%= gameType %>
+                            </option>
+                            <% }); %>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label" for="requirement">Looking For</label>
+                    <select name="requirement" id="requirement" class="filter-select">
+                        <option value="">All</option>
+                        <% availableRequirements.forEach(requirement=> { %>
+                            <option value="<%= requirement %>" <%=filters.requirement===requirement ? 'selected' : '' %>>
+                                <%= requirement %>
                             </option>
                             <% }); %>
                     </select>
@@ -280,7 +311,7 @@
             <h1 class="page-title">Featured Games</h1>
             <!-- Filter Icon -->
             <button
-                class="filter-icon <%= (filters.date || filters.enddate || filters.time || filters.endtime ||filters.gameType) ? 'has-filters' : '' %>"
+                class="filter-icon <%= (filters.date || filters.enddate || filters.time || filters.endtime || filters.day || filters.gameType || filters.requirement) ? 'has-filters' : '' %>"
                 id="filterIcon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" />
@@ -309,14 +340,23 @@
                         <% if (filters.gameType) { %>
                             <input type="hidden" name="gameType" value="<%= filters.gameType %>" />
                         <% } %>
+                        <% if (filters.requirement) { %>
+                            <input type="hidden" name="requirement" value="<%= filters.requirement %>" />
+                        <% } %>
+                        <% if (filters.day) { %>
+                            <input type="hidden" name="day" value="<%= filters.day %>" />
+                        <% } %>
+                        <% if (filters.requirement) { %>
+                            <input type="hidden" name="requirement" value="<%= filters.requirement %>" />
+                        <% } %>
                         <label for="sorting">Sort By</label>
                         <select name="sorting" id="sorting" class="filter-select">
-                            <option value="">Default</option>
+                            <option value="">Newly Posted</option>
                             <option value="asc" <%=filters.sorting==="asc" ? "selected" : "" %>>
-                                Starting Soon
+                                Latest Games
                             </option>
                             <option value="desc" <%=filters.sorting==="desc" ? "selected" : "" %>>
-                                Starting Later
+                                Further Games
                             </option>
                         </select>
                     </form>
@@ -362,9 +402,17 @@
             enddate: urlParams.get('enddate') || '',
             time: urlParams.get('time') || '',
             endtime: urlParams.get('endtime') || '',
+            day: urlParams.get('day') || '',
             gameType: urlParams.get('gameType') || '',
+            requirement: urlParams.get('requirement') || '',
             sorting: urlParams.get('sorting') || '',
         };
+
+        // Reset pagination when page loads (filters might have changed)
+        currentPage = 1;
+        hasMore = true;
+        gamesContainer.innerHTML = '';
+        endMessage.style.display = 'none';
 
 
         function openFilters() {
@@ -390,6 +438,17 @@
             return date.toLocaleDateString('en-SG');
         }
 
+        // Format time to HH:MM (remove seconds)
+        function formatTime(timeString) {
+            if (!timeString) return 'Time TBD';
+            // If time is in HH:MM:SS format, remove seconds
+            if (timeString.includes(':')) {
+                const parts = timeString.split(':');
+                return parts[0] + ':' + parts[1]; // Return HH:MM
+            }
+            return timeString;
+        }
+
         // Create match card HTML
         function createMatchCard(match) {
             const hasTag = match.requirement || match.game_type;
@@ -404,7 +463,7 @@
                     ` : ''}
                     <div class="card-header">
                         <h2 class="game-title">${match.original_message.trim()}</h2>
-                        <span class="game-price">${match.entry || '$0'}</span>
+                        <span class="game-price ${!match.entry ? 'empty-price' : ''}">${match.entry || 'Contact for Price'}</span>
                     </div>
                     <div class="game-details-alt">
                         <div class="detail-row-group">
@@ -414,7 +473,7 @@
                             </div>
                             <div class="detail-row">
                                 <span class="icon">⏰</span>
-                                <span>${match.time || 'Time TBD'}</span>
+                                <span>${formatTime(match.time)}</span>
                             </div>
                             <div class="detail-row">
                                 <span class="icon">📍</span>
@@ -444,7 +503,9 @@
                     enddate: filters.enddate,
                     time: filters.time,
                     endtime: filters.endtime,
+                    day: filters.day,
                     gameType: filters.gameType,
+                    requirement: filters.requirement,
                     sorting: filters.sorting
                 });
 
