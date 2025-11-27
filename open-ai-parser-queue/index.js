@@ -460,41 +460,94 @@ app.post("/parse", async (req, res) => {
 // API endpoint to delete expired matches (for cron jobs)
 // Deletes matches that are within 2 hours of their start time (or have passed)
 // Also deletes matches with only date (no time) if the date has passed
+// Also removes duplicate matches based on original_message or (date + time + location)
 app.get("/delete-expired-matches", async (req, res) => {
   try {
-    // Delete matches in two scenarios:
-    // 1. Matches with both date and time: delete if game time is within 2 hours (or has passed)
-    //    This means: if game is at 8pm, delete it at 6pm (2 hours before)
-    // 2. Matches with only date (no time): delete if the date has passed
-    const query = `
+    let totalDeleted = 0;
+    
+    // 1. Delete expired matches
+    // Use Singapore timezone (UTC+8) for date/time comparisons
+    // Set session timezone to Singapore (UTC+8) for accurate comparisons
+    await dbPool.execute("SET time_zone = '+08:00'");
+    
+    const expiredQuery = `
             DELETE FROM football_matches
             WHERE date IS NOT NULL 
             AND (
               -- Case 1: Has both date and time - delete if within 2 hours of start time
+              -- NOW() now uses Singapore timezone (UTC+8)
               (time IS NOT NULL AND TIMESTAMP(date, time) <= DATE_ADD(NOW(), INTERVAL 2 HOUR))
               OR
-              -- Case 2: Has only date (no time) - delete if date has passed
+              -- Case 2: Has only date (no time) - delete if date has passed in Singapore timezone
               (time IS NULL AND date < CURDATE())
             )
             `;
-    const [result] = await dbPool.execute(query);
+    const [expiredResult] = await dbPool.execute(expiredQuery);
+    totalDeleted += expiredResult.affectedRows;
+    logger.info(`🗑️ Deleted ${expiredResult.affectedRows} expired matches`);
     
-    logger.info(`🗑️ Deleted ${result.affectedRows} expired matches`);
+    // 2. Delete duplicates based on date + time + location combination (priority 1)
+    // If date, time, and location are all the same, delete duplicates
+    const duplicateLocationQuery = `
+            DELETE fm1 FROM football_matches fm1
+            INNER JOIN football_matches fm2 
+            WHERE fm1.id > fm2.id 
+            AND fm1.date = fm2.date
+            AND fm1.time = fm2.time
+            AND fm1.location = fm2.location
+            AND fm1.date IS NOT NULL
+            AND fm1.time IS NOT NULL
+            AND fm1.location IS NOT NULL
+            AND fm2.date IS NOT NULL
+            AND fm2.time IS NOT NULL
+            AND fm2.location IS NOT NULL
+            `;
+    const [duplicateLocationResult] = await dbPool.execute(duplicateLocationQuery);
+    totalDeleted += duplicateLocationResult.affectedRows;
+    logger.info(`🗑️ Deleted ${duplicateLocationResult.affectedRows} duplicate matches (same date + time + location)`);
+    
+    // 3. Delete duplicates based on original_message (priority 2)
+    // Only if date+time+location don't match, check if original message is the same
+    const duplicateMessageQuery = `
+            DELETE fm1 FROM football_matches fm1
+            INNER JOIN football_matches fm2 
+            WHERE fm1.id > fm2.id 
+            AND fm1.original_message = fm2.original_message
+            AND NOT (
+                fm1.date = fm2.date 
+                AND fm1.time = fm2.time 
+                AND fm1.location = fm2.location
+                AND fm1.date IS NOT NULL
+                AND fm1.time IS NOT NULL
+                AND fm1.location IS NOT NULL
+                AND fm2.date IS NOT NULL
+                AND fm2.time IS NOT NULL
+                AND fm2.location IS NOT NULL
+            )
+            `;
+    const [duplicateMessageResult] = await dbPool.execute(duplicateMessageQuery);
+    totalDeleted += duplicateMessageResult.affectedRows;
+    logger.info(`🗑️ Deleted ${duplicateMessageResult.affectedRows} duplicate matches (same original message, but different date/time/location)`);
     
     res.json({
       success: true,
-      message: "Expired matches deleted successfully",
-      deleted: result.affectedRows,
+      message: "Expired and duplicate matches deleted successfully",
+      deleted: totalDeleted,
+      breakdown: {
+        expired: expiredResult.affectedRows,
+        duplicateMessage: duplicateMessageResult.affectedRows,
+        duplicateLocation: duplicateLocationResult.affectedRows
+      },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    logger.error(`❌ Error deleting expired matches:`, {
+    logger.error(`❌ Error deleting expired/duplicate matches:`, {
       error: error.message,
       stack: error.stack,
     });
     res.status(500).json({
       success: false,
-      error: "Failed to delete expired matches",
+      error: "Failed to delete expired/duplicate matches",
       message: error.message,
     });
   }
