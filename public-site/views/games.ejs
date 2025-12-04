@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KYNA - Exceptional Jerseys</title>
+    <link rel="stylesheet" href="/css/games.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div id="page-loader">
+        <img src="/public/images/loader.JPG" alt="Loading" />
+        <div class="progress-bar-container">
+          <div class="progress-bar-wrapper">
+            <div class="progress-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <header class="main-header">
+        <div class="logo">
+          <h1>KYNA</h1>
+        </div>
+        <div class="tagline">EXCEPTIONAL JERSEYS<br />WITHOUT EXCEPTION</div>
+      </header>
+
+      <main>
+        <section class="info-bar">
+          <div class="date-weather">
+            <div class="date" id="current-date">LOADING DATE...</div>
+            <div class="weather-current">
+              <div>
+                <span class="icon" id="current-icon"></span>
+                <span class="temp" id="current-temp">--°C</span>
+              </div>
+              <span class="condition" id="current-condition">LOADING...</span>
+            </div>
+          </div>
+          <div class="time" id="current-time">--:--</div>
+        </section>
+
+        <section class="hero-section">
+          <div class="forecast-panel" id="forecast-container">
+            <h2>NEXT 4 DAYS</h2>
+            <div class="forecast-item">
+              <p>Loading forecast...</p>
+            </div>
+          </div>
+          <div class="hero-image" aria-label="Woman wearing AS AUTO jersey"></div>
+        </section>
+
+        <section class="promo-banner">
+          <div class="banner-placeholder">
+            <a href="/games" class="banner-button" style="text-decoration: none; display: inline-block;">JOIN A GAME</a>
+          </div>
+        </section>
+
+        <section class="train-services">
+          <div class="train-service-message">
+            <div class="service-message-label">TRAIN SERVICE STATUS</div>
+            <div class="service-message-content <%= trainService.hasAlert ? 'has-alert' : '' %>">
+              <%= trainService.message || 'Normal service' %>
+            </div>
+          </div>
+        </section>
+
+        <section class="weather-report">
+          <h2>2-HOUR WEATHER REPORT</h2>
+
+          <div class="region-report" id="region-north">
+            <h3>NORTH</h3>
+            <div class="report-details">
+              <div class="locations">Loading...</div>
+              <div class="conditions"></div>
+            </div>
+          </div>
+
+          <div class="region-report" id="region-west">
+            <h3>WEST</h3>
+            <div class="report-details">
+              <div class="locations">Loading...</div>
+              <div class="conditions"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/js/games.js"></script>
+  </body>
+</html>
+

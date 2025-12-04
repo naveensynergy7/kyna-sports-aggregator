@@ -221,6 +221,77 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        /* Container preloader */
+        .container {
+            position: relative;
+        }
+
+        #page-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            margin: 0;
+            padding: 0;
+        }
+
+        #page-loader img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Progress bar container */
+
+        .progress-bar-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            max-width: 80%;
+            z-index: 10000;
+        }
+
+        .progress-bar-wrapper {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #000 0%, #333 50%, #000 100%);
+            border-radius: 10px;
+            width: 0%;
+            animation: progressAnimation 2s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes progressAnimation {
+            0% {
+                width: 0%;
+                transform: translateX(0);
+            }
+            50% {
+                width: 70%;
+            }
+            100% {
+                width: 100%;
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
 
@@ -235,7 +306,7 @@
             <button class="filter-close" id="filterClose">&times;</button>
         </div>
 
-        <form method="GET" action="/">
+        <form method="GET" action="/games">
             <!-- Preserve sorting when applying filters -->
             <% if (filters.sorting) { %>
                 <input type="hidden" name="sorting" value="<%= filters.sorting %>" />
@@ -300,13 +371,22 @@
 
             <div class="filter-actions">
                 <button type="submit" class="btn-filter-apply">Apply</button>
-                <a href="/" class="btn-filter-clear"
+                <a href="/games" class="btn-filter-clear"
                     style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Clear</a>
             </div>
         </form>
     </div>
 
     <div class="container">
+        <div id="page-loader">
+            <img src="/public/images/loader.JPG" alt="Loading" />
+            <div class="progress-bar-container">
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
         <header>
             <h1 class="page-title">Featured Games</h1>
             <!-- Filter Icon -->
@@ -323,7 +403,7 @@
             <!-- Info Text -->
             <div class="info-text">
                 <div class="filter-started">
-                    <form class="form-data" method="get" action="/">
+                    <form class="form-data" method="get" action="/games">
                         <!-- Preserve all filter values when changing sorting -->
                         <% if (filters.date) { %>
                             <input type="hidden" name="date" value="<%= filters.date %>" />
@@ -463,7 +543,6 @@
                     ` : ''}
                     <div class="card-header">
                         <h2 class="game-title">${match.original_message.trim()}</h2>
-                        <span class="game-price ${!match.entry ? 'empty-price' : ''}">${match.entry || 'Contact for Price'}</span>
                     </div>
                     <div class="game-details-alt">
                         <div class="detail-row-group">
@@ -480,18 +559,26 @@
                                 <span>${match.location || 'Location TBD'}</span>
                             </div>
                         </div>
+                    </div>
+
                         <div class="card-actions">
-                            <button class="btn-details" onclick="alert('Details coming soon!')">Details</button>
+                        <span class="game-price ${!match.entry ? 'empty-price' : ''}">${match.entry || 'Contact for Price'}</span>
                             <a href="${match.contact_url || '#'}" target="_blank" class="btn-contact">Contact</a>
                         </div>
-                    </div>
+
                 </div>
             `;
         }
 
+
         // Load matches
         async function loadMatches() {
             if (isLoading || !hasMore) return;
+
+            if(currentPage === 1) {
+                document.getElementById('page-loader').style.display = 'block';
+                gamesContainer.style.display = 'none';
+            }
 
             isLoading = true;
             loading.style.display = 'block';
@@ -532,6 +619,11 @@
             } finally {
                 isLoading = false;
                 loading.style.display = 'none';
+                
+                setTimeout(() => {
+                    document.getElementById('page-loader').style.display = 'none';
+                    gamesContainer.style.display = 'block';
+                }, 2000);
             }
         }
 

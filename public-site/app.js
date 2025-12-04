@@ -13,6 +13,7 @@ app.set("views", path.join(__dirname, "views"));
 // Static files
 app.use("/css", express.static(path.join(__dirname, "css")));
 app.use("/js", express.static(path.join(__dirname, "js")));
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 // MySQL connection pool
 const dbPool = mysql.createPool({
@@ -25,8 +26,125 @@ const dbPool = mysql.createPool({
   queueLimit: 0,
 });
 
-// Home route - show matches with filters
+// Helper function to fetch and process train service status
+async function getTrainServiceStatus() {
+  try {
+    const LTA_API_KEY = process.env.LTA_API_KEY || "wKPPIctaRkmGmszaXrTlUw==";
+    const apiUrl = "https://datamall2.mytransport.sg/ltaodataservice/TrainServiceAlerts";
+    
+    console.log("🚇 Fetching train service status from DataMall API...");
+    console.log("📍 API URL:", apiUrl);
+    console.log("🔑 Using API Key:", LTA_API_KEY.substring(0, 10) + "...");
+    
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "AccountKey": LTA_API_KEY,
+        "Accept": "application/json"
+      }
+    });
+    
+    console.log("📡 Response status:", response.status, response.statusText);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log("❌ Error response body:", errorText);
+      throw new Error(`DataMall API failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log("📦 Raw API Response:", JSON.stringify(data, null, 2));
+    
+    // Train line mapping
+    const trainLineMapping = {
+      EW: "East-West Line",
+      NS: "North-South Line",
+      NE: "North East Line",
+      CC: "Circle Line",
+      DT: "Downtown Line",
+      TE: "Thomson-East Coast Line"
+    };
+    
+    // Initialize all lines to "Normal service"
+    const lineStatuses = {};
+    Object.keys(trainLineMapping).forEach(lineCode => {
+      lineStatuses[lineCode] = "Normal service";
+    });
+    
+    // Process API response
+    // API returns: { value: { Status: 1, AffectedSegments: [], Message: [{ Content: "...", CreatedDate: "..." }] } }
+    // Status: 1 = Alert exists, 0 or undefined = Normal service
+    if (data.value && typeof data.value === 'object') {
+      const alertData = data.value;
+      const status = alertData.Status;
+      
+      console.log("📊 Alert Status:", status);
+      
+      // Only process if there's an active alert (Status === 1)
+      if (status === 1 && alertData.Message && Array.isArray(alertData.Message) && alertData.Message.length > 0) {
+        console.log("⚠️  Processing active alert with", alertData.Message.length, "message(s)");
+        
+        // Combine all messages into a general message
+        const messages = alertData.Message.map(messageObj => {
+          return messageObj.Content || messageObj.content || "";
+        }).filter(msg => msg.length > 0);
+        
+        if (messages.length > 0) {
+          // Join all messages with a separator, or use the first one
+          let generalMessage = messages.join(" | ");
+          
+          // Show full message without clipping
+          console.log("📝 General message:", generalMessage);
+          
+          // Apply the same general message to all lines
+          Object.keys(trainLineMapping).forEach(lineCode => {
+            lineStatuses[lineCode] = generalMessage;
+          });
+        }
+      } else {
+        console.log("✅ No active alerts - all services normal");
+      }
+    } else {
+      console.log("⚠️  Unexpected API response format");
+    }
+    
+    // Return a single general message instead of per-line statuses
+    const generalMessage = lineStatuses.EW !== "Normal service" ? lineStatuses.EW : "Normal service";
+    
+    console.log("✅ General train service message:", generalMessage);
+    return {
+      message: generalMessage,
+      hasAlert: generalMessage !== "Normal service"
+    };
+  } catch (error) {
+    console.error("❌ Error fetching train service status:", error);
+    // Return default statuses on error
+    return {
+      message: "Normal service",
+      hasAlert: false
+    };
+  }
+}
+
+// Games route - KYNA Exceptional Jerseys page (now homepage)
 app.get("/", async (req, res) => {
+  try {
+    const trainService = await getTrainServiceStatus();
+    res.render("games", { trainService });
+  } catch (error) {
+    console.error("Error in / route:", error);
+    // Render with default message on error
+    res.render("games", {
+      trainService: {
+        message: "Normal service",
+        hasAlert: false
+      }
+    });
+  }
+});
+
+// Home route - show matches with filters (moved to /games)
+app.get("/games", async (req, res) => {
   try {
     // Get filter parameters
     const filters = {
