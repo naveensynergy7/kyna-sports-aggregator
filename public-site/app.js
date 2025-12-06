@@ -26,8 +26,22 @@ const dbPool = mysql.createPool({
   queueLimit: 0,
 });
 
+// Cache for train service status (5 minute TTL)
+let trainServiceCache = {
+  data: null,
+  timestamp: 0,
+  ttl: 5 * 60 * 1000 // 5 minutes
+};
+
 // Helper function to fetch and process train service status
 async function getTrainServiceStatus() {
+  // Check cache first
+  const now = Date.now();
+  if (trainServiceCache.data && (now - trainServiceCache.timestamp) < trainServiceCache.ttl) {
+    console.log("🚇 Using cached train service status");
+    return trainServiceCache.data;
+  }
+
   try {
     const LTA_API_KEY = process.env.LTA_API_KEY || "wKPPIctaRkmGmszaXrTlUw==";
     const apiUrl = "https://datamall2.mytransport.sg/ltaodataservice/TrainServiceAlerts";
@@ -36,88 +50,129 @@ async function getTrainServiceStatus() {
     console.log("📍 API URL:", apiUrl);
     console.log("🔑 Using API Key:", LTA_API_KEY.substring(0, 10) + "...");
     
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "AccountKey": LTA_API_KEY,
-        "Accept": "application/json"
+    // Create an AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    try {
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "AccountKey": LTA_API_KEY,
+          "Accept": "application/json"
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      console.log("📡 Response status:", response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log("❌ Error response body:", errorText);
+        throw new Error(`DataMall API failed: ${response.status} ${response.statusText}`);
       }
-    });
-    
-    console.log("📡 Response status:", response.status, response.statusText);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log("❌ Error response body:", errorText);
-      throw new Error(`DataMall API failed: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log("📦 Raw API Response:", JSON.stringify(data, null, 2));
-    
-    // Train line mapping
-    const trainLineMapping = {
-      EW: "East-West Line",
-      NS: "North-South Line",
-      NE: "North East Line",
-      CC: "Circle Line",
-      DT: "Downtown Line",
-      TE: "Thomson-East Coast Line"
-    };
-    
-    // Initialize all lines to "Normal service"
-    const lineStatuses = {};
-    Object.keys(trainLineMapping).forEach(lineCode => {
-      lineStatuses[lineCode] = "Normal service";
-    });
-    
-    // Process API response
-    // API returns: { value: { Status: 1, AffectedSegments: [], Message: [{ Content: "...", CreatedDate: "..." }] } }
-    // Status: 1 = Alert exists, 0 or undefined = Normal service
-    if (data.value && typeof data.value === 'object') {
-      const alertData = data.value;
-      const status = alertData.Status;
       
-      console.log("📊 Alert Status:", status);
+      const data = await response.json();
+      console.log("📦 Raw API Response:", JSON.stringify(data, null, 2));
       
-      // Only process if there's an active alert (Status === 1)
-      if (status === 1 && alertData.Message && Array.isArray(alertData.Message) && alertData.Message.length > 0) {
-        console.log("⚠️  Processing active alert with", alertData.Message.length, "message(s)");
+      // Train line mapping
+      const trainLineMapping = {
+        EW: "East-West Line",
+        NS: "North-South Line",
+        NE: "North East Line",
+        CC: "Circle Line",
+        DT: "Downtown Line",
+        TE: "Thomson-East Coast Line"
+      };
+      
+      // Initialize all lines to "Normal service"
+      const lineStatuses = {};
+      Object.keys(trainLineMapping).forEach(lineCode => {
+        lineStatuses[lineCode] = "Normal service";
+      });
+      
+      // Process API response
+      // API returns: { value: { Status: 1, AffectedSegments: [], Message: [{ Content: "...", CreatedDate: "..." }] } }
+      // Status: 1 = Alert exists, 0 or undefined = Normal service
+      if (data.value && typeof data.value === 'object') {
+        const alertData = data.value;
+        const status = alertData.Status;
         
-        // Combine all messages into a general message
-        const messages = alertData.Message.map(messageObj => {
-          return messageObj.Content || messageObj.content || "";
-        }).filter(msg => msg.length > 0);
+        console.log("📊 Alert Status:", status);
         
-        if (messages.length > 0) {
-          // Join all messages with a separator, or use the first one
-          let generalMessage = messages.join(" | ");
+        // Only process if there's an active alert (Status === 1)
+        if (status === 1 && alertData.Message && Array.isArray(alertData.Message) && alertData.Message.length > 0) {
+          console.log("⚠️  Processing active alert with", alertData.Message.length, "message(s)");
           
-          // Show full message without clipping
-          console.log("📝 General message:", generalMessage);
+          // Combine all messages into a general message
+          const messages = alertData.Message.map(messageObj => {
+            return messageObj.Content || messageObj.content || "";
+          }).filter(msg => msg.length > 0);
           
-          // Apply the same general message to all lines
-          Object.keys(trainLineMapping).forEach(lineCode => {
-            lineStatuses[lineCode] = generalMessage;
-          });
+          if (messages.length > 0) {
+            // Join all messages with a separator, or use the first one
+            let generalMessage = messages.join(" | ");
+            
+            // Show full message without clipping
+            console.log("📝 General message:", generalMessage);
+            
+            // Apply the same general message to all lines
+            Object.keys(trainLineMapping).forEach(lineCode => {
+              lineStatuses[lineCode] = generalMessage;
+            });
+          }
+        } else {
+          console.log("✅ No active alerts - all services normal");
         }
       } else {
-        console.log("✅ No active alerts - all services normal");
+        console.log("⚠️  Unexpected API response format");
       }
-    } else {
-      console.log("⚠️  Unexpected API response format");
+      
+      // Return a single general message instead of per-line statuses
+      const generalMessage = lineStatuses.EW !== "Normal service" ? lineStatuses.EW : "Normal service";
+      
+      console.log("✅ General train service message:", generalMessage);
+      const result = {
+        message: generalMessage,
+        hasAlert: generalMessage !== "Normal service"
+      };
+      
+      // Cache the result
+      trainServiceCache.data = result;
+      trainServiceCache.timestamp = now;
+      
+      return result;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error("❌ Train service API timed out after 5 seconds");
+      } else {
+        console.error("❌ Error fetching train service status:", fetchError);
+      }
+      
+      // If we have cached data, return it even if expired
+      if (trainServiceCache.data) {
+        console.log("⚠️  Using stale cache due to API failure");
+        return trainServiceCache.data;
+      }
+      
+      // Return default statuses on error
+      return {
+        message: "Normal service",
+        hasAlert: false
+      };
+    }
+  } catch (error) {
+    console.error("❌ Error in getTrainServiceStatus:", error);
+    
+    // If we have cached data, return it even if expired
+    if (trainServiceCache.data) {
+      console.log("⚠️  Using stale cache due to error");
+      return trainServiceCache.data;
     }
     
-    // Return a single general message instead of per-line statuses
-    const generalMessage = lineStatuses.EW !== "Normal service" ? lineStatuses.EW : "Normal service";
-    
-    console.log("✅ General train service message:", generalMessage);
-    return {
-      message: generalMessage,
-      hasAlert: generalMessage !== "Normal service"
-    };
-  } catch (error) {
-    console.error("❌ Error fetching train service status:", error);
     // Return default statuses on error
     return {
       message: "Normal service",
