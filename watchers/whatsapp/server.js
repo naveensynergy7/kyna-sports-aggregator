@@ -34,6 +34,9 @@ app.options("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+  // Immediately send 200 OK to prevent timeout
+  res.sendStatus(200);
+  
   console.log('✅ POST /webhook received');
   const body = req.body;
 
@@ -41,14 +44,15 @@ app.post("/webhook", async (req, res) => {
 
   if (!allowedUsers.includes(body.typeWebhook)) {
     console.log(`⏭️  Skipping webhook type: ${body.typeWebhook || 'undefined'}`);
-    return res.sendStatus(200);
+    return; // Already sent 200 OK above
   }
 
   const chatId = body?.senderData?.chatId;
   const senderId = body?.senderData?.sender;
 
   if (!chatId || !chatId.endsWith("@g.us")) {
-    return res.sendStatus(200);
+    console.log(`⏭️  Skipping non-group chat. chatId: ${chatId}`);
+    return; // Already sent 200 OK above
   }
 
   const cleanSenderId = senderId.replace("@c.us", "");
@@ -56,7 +60,8 @@ app.post("/webhook", async (req, res) => {
   const message = body?.messageData?.textMessageData?.textMessage;
 
   if (!message) {
-    return res.sendStatus(200);
+    console.log(`⏭️  Skipping message without text content`);
+    return; // Already sent 200 OK above
   }
 
   console.log("✅ Webhook HIT");
@@ -68,12 +73,13 @@ app.post("/webhook", async (req, res) => {
   // console.log(JSON.stringify(req.body, null, 2));
   if (body.typeWebhook === "quotaExceeded") {
     console.warn("⚠️ GREEN-API quota exceeded");
-    return res.sendStatus(200);
+    return; // Already sent 200 OK above
   }
 
-  await sendData(message, cleanSenderId);
-
-  res.sendStatus(200);
+  // Process asynchronously after responding
+  sendData(message, cleanSenderId).catch(err => {
+    console.error('❌ Error sending data to parser queue:', err.message);
+  });
 });
 
 app.get("/", (req, res) => {
