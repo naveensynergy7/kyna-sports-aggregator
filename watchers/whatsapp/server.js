@@ -27,17 +27,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Handle preflight OPTIONS requests
-app.options("/webhook", (req, res) => {
-  console.log('✅ OPTIONS request received');
-  res.sendStatus(200);
-});
-
-app.post("/webhook", async (req, res) => {
+// Webhook processing function (shared between / and /webhook endpoints)
+const processWebhook = async (req, res, endpoint) => {
   // Immediately send 200 OK to prevent timeout
   res.sendStatus(200);
   
-  console.log('✅ POST /webhook received');
+  console.log(`✅ POST ${endpoint} received`);
   const body = req.body;
 
   const allowedUsers = ["incomingMessageReceived", "outgoingMessageReceived"];
@@ -80,6 +75,27 @@ app.post("/webhook", async (req, res) => {
   sendData(message, cleanSenderId).catch(err => {
     console.error('❌ Error sending data to parser queue:', err.message);
   });
+};
+
+// Handle preflight OPTIONS requests for both endpoints
+app.options("/webhook", (req, res) => {
+  console.log('✅ OPTIONS /webhook request received');
+  res.sendStatus(200);
+});
+
+app.options("/", (req, res) => {
+  console.log('✅ OPTIONS / request received');
+  res.sendStatus(200);
+});
+
+// Webhook endpoint (for explicit /webhook path)
+app.post("/webhook", async (req, res) => {
+  await processWebhook(req, res, "/webhook");
+});
+
+// Root endpoint - Green API sends webhooks to / (root path)
+app.post("/", async (req, res) => {
+  await processWebhook(req, res, "/");
 });
 
 app.get("/", (req, res) => {
