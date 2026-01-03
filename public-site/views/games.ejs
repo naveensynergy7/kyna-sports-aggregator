@@ -56,12 +56,58 @@
         </section>
 
         <section class="train-services">
-          <div class="train-service-message">
-            <div class="service-message-label">TRAIN SERVICE STATUS</div>
-            <div class="service-message-content <%= trainService.hasAlert ? 'has-alert' : '' %>">
-              <%= trainService.message || 'Normal service' %>
+          <% if (typeof mrtLines !== 'undefined' && mrtLines && mrtLines.lines) { %>
+            <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 20px; margin: 0 auto; max-width: 800px;">
+              <div style="background-color: #dcecf2; padding: 15px 20px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0;">
+                <h4 style="font-size: 18px; font-weight: 700; color: #000; margin: 0;">TRAIN SERVICE STATUS</h4>
+              </div>
+              <div style="font-size: 13px; color: #444; margin-bottom: 20px; padding-left: 0;">
+                Last updated: <%= mrtLines.lastUpdated %>
+              </div>
+              <% if (mrtLines.error) { %>
+                <div style="background-color: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 10px 15px; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
+                  ⚠️ <%= mrtLines.error %>
+                </div>
+              <% } %>
+              <% if (mrtLines.lines && mrtLines.lines.length > 0) { %>
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                  <% mrtLines.lines.forEach(function(line) { %>
+                    <li style="border-bottom: 1px solid #e0e0e0; padding: 15px 0;">
+                      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                          <% if (line.icon) { %>
+                            <img src="<%= line.icon %>" alt="<%= line.name %>" style="width: 40px; height: auto; max-width: 40px; margin-right: 10px; display: inline-block; vertical-align: middle;" onerror="this.style.display='none'">
+                          <% } %>
+                          <span style="font-size: 16px; font-weight: 500;"><%= line.name %></span>
+                        </div>
+                        <% if (line.statusIcon) { %>
+                          <img src="<%= line.statusIcon %>" alt="<%= line.status %> status" style="height: 18px; width: auto; margin-left: 8px;" onerror="this.style.display='none'">
+                        <% } %>
+                      </div>
+                      <% if (line.message) { %>
+                        <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: left; display: block; line-height: 1.5;">
+                          <span style="font-weight: 600; color: #333;"><%= line.message.boldPrefix %></span>
+                          <% if (line.message.msg && line.message.msg !== line.message.status) { %>
+                            <span style="color: #666; white-space: normal; word-break: break-word;"> <%= line.message.msg %></span>
+                          <% } %>
+                        </div>
+                      <% } %>
+                    </li>
+                  <% }); %>
+                </ul>
+              <% } else { %>
+                <div style="text-align: center; padding: 40px; color: #666;">No lines available</div>
+              <% } %>
             </div>
-          </div>
+          <% } else { %>
+            <!-- Fallback to old display if mrtLines not available -->
+            <div class="train-service-message">
+              <div class="service-message-label">TRAIN SERVICE STATUS</div>
+              <div class="service-message-content <%= trainService.hasAlert ? 'has-alert' : '' %>">
+                <%= trainService.message || 'Normal service' %>
+              </div>
+            </div>
+          <% } %>
         </section>
 
         <section class="weather-report">

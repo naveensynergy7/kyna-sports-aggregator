@@ -1,6 +1,8 @@
 const express = require("express");
 const mysql = require("mysql2/promise");
 const path = require("path");
+const axios = require("axios");
+const cheerio = require("cheerio");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
 
 const app = express();
@@ -32,6 +34,17 @@ let trainServiceCache = {
   timestamp: 0,
   ttl: 5 * 60 * 1000 // 5 minutes
 };
+
+// Cache for MRT lines data (5 minute TTL)
+let mrtLinesCache = {
+  data: null,
+  timestamp: 0,
+  ttl: 5 * 60 * 1000 // 5 minutes
+};
+
+const LTA_BASE_URL = 'https://www.lta.gov.sg';
+const DATAMALL_API_URL = 'https://datamall2.mytransport.sg/ltaodataservice/TrainServiceAlerts';
+const STATUS_IMAGE_BASE = 'https://www.lta.gov.sg/content/dam/ltagov/map/mrt/TrainDisruption/';
 
 // Helper function to fetch and process train service status
 async function getTrainServiceStatus() {
@@ -181,11 +194,255 @@ async function getTrainServiceStatus() {
   }
 }
 
+// Helper function to fetch Train Service Alerts
+async function getTrainServiceAlerts() {
+  try {
+    const LTA_API_KEY = process.env.LTA_API_KEY || "wKPPIctaRkmGmszaXrTlUw==";
+    const response = await axios.get(DATAMALL_API_URL, {
+      headers: {
+        'AccountKey': LTA_API_KEY,
+        'Accept': 'application/json'
+      },
+      timeout: 10000
+    });
+    
+    if (response.data && response.data.value) {
+      return response.data.value;
+    }
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error fetching train alerts:", error.message);
+    // Return default structure with no alerts
+    return {
+      Status: 1,
+      AffectedSegments: [],
+      Message: []
+    };
+  }
+}
+
+// Helper function to parse alerts and map to line status and messages
+function parseAlertsToStatusMap(alerts) {
+  const statusMap = {};
+  const msgMap = {};
+  const knownLines = ['EW', 'STL', 'BPL', 'NSL', 'DTL', 'PTL', 'NEL', 'CCL', 'TEL', 'EWL', 'NS', 'NE', 'CC', 'DT', 'BP', 'STC', 'PTC'];
+  
+  // Initialize all lines to Normal explicitly
+  knownLines.forEach(id => {
+    statusMap[id] = 'Normal';
+  });
+  
+  if (!alerts || !alerts.Message || !Array.isArray(alerts.Message)) {
+    return { statusMap, msgMap };
+  }
+  
+  // Parse messages - format: "HH:MM-<LINE>-Major" or "HH:MM-<LINE>-Minor" or "HH:MM-<LINE>-Planned"
+  alerts.Message.forEach((entry) => {
+    const raw = (entry.Content || entry.content || '').toString().replace(/\r\n/g, '\n').trim();
+    const match = raw.match(/^(\d{2}:\d{2})-([A-Za-z0-9]+)-(Major|Minor|Planned)\b\.?\s*([\s\S]*)$/i);
+    
+    if (!match) {
+      return; // Ignore messages that don't match the pattern
+    }
+    
+    const time = match[1];
+    const line = (match[2] || '').toUpperCase();
+    const rawKey = (match[3] || '').toLowerCase();
+    const remainder = (match[4] || '').trim();
+    const createdRaw = entry.CreatedDate || entry.createdDate || entry.Created_Date || entry.created_date || '';
+    
+    // Normalize status key
+    const statusKey = rawKey === 'major' ? 'major' : rawKey === 'minor' ? 'minor' : rawKey === 'planned' ? 'planned' : null;
+    const statusFull = statusKey === 'major' ? 'Major' : statusKey === 'minor' ? 'Minor' : statusKey === 'planned' ? 'Planned' : '';
+    const boldPrefix = time + '-' + line + '-' + statusFull;
+    
+    // Parse timestamp
+    let createdTs = Date.now();
+    if (createdRaw && typeof createdRaw === 'string') {
+      try {
+        const normalized = createdRaw.trim().replace(/\s+/, 'T');
+        createdTs = Date.parse(normalized) || Date.now();
+      } catch (e) {
+        createdTs = Date.now();
+      }
+    }
+    if (!createdTs || isNaN(createdTs)) {
+      createdTs = Date.now();
+    }
+    
+    // Keep only the latest message per line
+    const existing = msgMap[line];
+    if (!existing || !existing._createdTs || createdTs >= existing._createdTs) {
+      msgMap[line] = {
+        statusKey: statusKey,
+        originalKey: rawKey,
+        status: statusFull,
+        msg: remainder || statusFull,
+        full: raw,
+        boldPrefix: boldPrefix,
+        _createdTs: createdTs
+      };
+    }
+  });
+  
+  // Map status keys to icon statuses (strict: Major -> Moderate, Minor -> Minor, Planned -> Planned)
+  Object.keys(msgMap).forEach(line => {
+    const statusKey = msgMap[line].statusKey.toLowerCase();
+    if (statusKey === 'major') {
+      statusMap[line] = 'Moderate';
+    } else if (statusKey === 'minor') {
+      statusMap[line] = 'Minor';
+    } else if (statusKey === 'planned') {
+      statusMap[line] = 'Planned';
+    }
+  });
+  
+  return { statusMap, msgMap };
+}
+
+// Helper function to parse line list HTML and extract line data
+async function parseLineListHTML(html, statusMap = {}, msgMap = {}) {
+  const $ = cheerio.load(html);
+  const lines = [];
+  
+  $('ul.trains li').each(function() {
+    const $li = $(this);
+    const $link = $li.find('a');
+    const lineId = $link.attr('data-id');
+    const $img = $link.find('img.mrtline-icon');
+    const iconSrc = $img.attr('src') || '';
+    
+    // Extract line name - get text but exclude image alt text
+    let lineName = '';
+    $link.contents().each(function() {
+      if (this.nodeType === 3) { // Text node
+        lineName += $(this).text();
+      }
+    });
+    lineName = lineName.trim().replace(/\s+/g, ' ');
+    
+    if (lineId) {
+      // Use absolute URL for icon
+      let iconUrl = iconSrc;
+      if (iconSrc && !iconSrc.startsWith('http')) {
+        if (iconSrc.startsWith('/')) {
+          iconUrl = `${LTA_BASE_URL}${iconSrc}`;
+        } else {
+          iconUrl = `${LTA_BASE_URL}/${iconSrc}`;
+        }
+      }
+      
+      // Get status for this line (normalize ID variations)
+      const normalizedId = lineId.toUpperCase();
+      const status = statusMap[normalizedId] || statusMap[lineId] || 'Normal';
+      const statusIcon = `${STATUS_IMAGE_BASE}${status}.png`;
+      
+      // Get message for this line (for UI display)
+      const message = msgMap[normalizedId] || msgMap[lineId] || null;
+      
+      lines.push({
+        id: lineId,
+        name: lineName,
+        icon: iconUrl,
+        status: status,
+        statusIcon: statusIcon,
+        message: message
+      });
+    }
+  });
+  
+  return lines;
+}
+
+// Helper function to format last updated timestamp
+function formatLastUpdated() {
+  const now = new Date();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = now.getDate().toString().padStart(2, '0');
+  const month = months[now.getMonth()];
+  const year = now.getFullYear();
+  let hours = now.getHours();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  return `${day} ${month} ${year} ${hours}:${minutes} ${ampm}`;
+}
+
+// Helper function to get MRT lines with status
+async function getMRTLines() {
+  // Check cache first
+  const now = Date.now();
+  if (mrtLinesCache.data && (now - mrtLinesCache.timestamp) < mrtLinesCache.ttl) {
+    console.log("🚇 Using cached MRT lines data");
+    return mrtLinesCache.data;
+  }
+
+  try {
+    // Fetch line list HTML and alerts in parallel
+    const [lineListResponse, alerts] = await Promise.all([
+      axios.get(`${LTA_BASE_URL}/map/mrt/line_list.html`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 10000
+      }),
+      getTrainServiceAlerts()
+    ]);
+    
+    // Parse alerts to status map and message map
+    const { statusMap, msgMap } = parseAlertsToStatusMap(alerts);
+    
+    // Parse HTML and add status icons and messages
+    const lines = await parseLineListHTML(lineListResponse.data, statusMap, msgMap);
+    const lastUpdated = formatLastUpdated();
+    
+    const result = {
+      lines: lines,
+      lastUpdated: lastUpdated
+    };
+    
+    // Cache the result
+    mrtLinesCache.data = result;
+    mrtLinesCache.timestamp = now;
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Error fetching MRT lines:', error.message);
+    
+    // If we have cached data, return it even if expired
+    if (mrtLinesCache.data) {
+      console.log("⚠️  Using stale cache due to error");
+      return mrtLinesCache.data;
+    }
+    
+    // Fallback data with default Normal status
+    const fallbackLines = [
+      { id: 'EWL', name: 'East-West Line', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_EastWestLine.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'NSL', name: 'North-South Line', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_NorthSouthLine.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'NEL', name: 'North East Line', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_NorthEastLine.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'CCL', name: 'Circle Line', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_CircleLine.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'DTL', name: 'Downtown Line', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_Downtown_Line.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'TEL', name: 'Thomson-East Coast Line', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_Thomson_East_Coast_Line.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'BPL', name: 'Bukit Panjang LRT', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_Bukit_Panjang_LRT.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'STL', name: 'Sengkang LRT', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_Sengkang_LRT.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null },
+      { id: 'PTL', name: 'Punggol LRT', icon: `${LTA_BASE_URL}/content/dam/ltagov/img/map/mrt/Icon_Punggol_LRT.svg`, status: 'Normal', statusIcon: `${STATUS_IMAGE_BASE}Normal.png`, message: null }
+    ];
+    
+    return {
+      lines: fallbackLines,
+      lastUpdated: formatLastUpdated(),
+      error: 'Using fallback data. Unable to fetch from LTA website.'
+    };
+  }
+}
+
 // Games route - KYNA Exceptional Jerseys page (now homepage)
 app.get("/", async (req, res) => {
   try {
     const trainService = await getTrainServiceStatus();
-    res.render("games", { trainService });
+    const mrtLines = await getMRTLines();
+    res.render("games", { trainService, mrtLines });
   } catch (error) {
     console.error("Error in / route:", error);
     // Render with default message on error
@@ -193,6 +450,11 @@ app.get("/", async (req, res) => {
       trainService: {
         message: "Normal service",
         hasAlert: false
+      },
+      mrtLines: {
+        lines: [],
+        lastUpdated: new Date().toLocaleString(),
+        error: "Unable to fetch MRT lines data"
       }
     });
   }
@@ -247,12 +509,16 @@ app.get("/games", async (req, res) => {
       .map((g) => g.game_type)
       .filter((gt) => allowedGameTypes.includes(gt));
 
+    // Fetch MRT lines data
+    const mrtLines = await getMRTLines();
+
     res.render("index", {
       filters: filters,
       availableDates: formattedDates,
       availableTimes: times.map((t) => t.time),
       availableGameTypes: filteredGameTypes,
       availableRequirements: requirements.map((r) => r.requirement),
+      mrtLines: mrtLines,
     });
   } catch (error) {
     console.error("Error fetching matches:", error);
