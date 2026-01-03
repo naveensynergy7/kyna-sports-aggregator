@@ -18,17 +18,29 @@ app.use(cors({
 
 app.use(bodyParser.json());
 
+// Log ALL incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`\n🔔 [${new Date().toISOString()}] ${req.method} ${req.path}`);
+  if (req.method === 'POST') {
+    console.log('📥 Body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
+
 // Handle preflight OPTIONS requests
 app.options("/webhook", (req, res) => {
+  console.log('✅ OPTIONS request received');
   res.sendStatus(200);
 });
 
 app.post("/webhook", async (req, res) => {
+  console.log('✅ POST /webhook received');
   const body = req.body;
 
   const allowedUsers = ["incomingMessageReceived", "outgoingMessageReceived"];
 
   if (!allowedUsers.includes(body.typeWebhook)) {
+    console.log(`⏭️  Skipping webhook type: ${body.typeWebhook || 'undefined'}`);
     return res.sendStatus(200);
   }
 
@@ -66,6 +78,12 @@ app.post("/webhook", async (req, res) => {
 
 app.get("/", (req, res) => {
   res.send("server is live");
+});
+
+// Catch-all for debugging - log any other requests
+app.use((req, res) => {
+  console.log(`❓ Unknown request: ${req.method} ${req.path}`);
+  res.status(404).send("Not found");
 });
 
 const port = process.env.PORT || 5000;
