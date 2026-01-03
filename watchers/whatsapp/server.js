@@ -1,12 +1,27 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 const sendData = require("./sendData");
 
 dotenv.config();
 
 const app = express();
+
+// Enable CORS for all routes (allows Green API and testing tools to access)
+app.use(cors({
+  origin: '*', // Allow all origins (you can restrict this to specific domains if needed)
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
+
 app.use(bodyParser.json());
+
+// Handle preflight OPTIONS requests
+app.options("/webhook", (req, res) => {
+  res.sendStatus(200);
+});
 
 app.post("/webhook", async (req, res) => {
   const body = req.body;
