@@ -86,6 +86,15 @@ app.get("/", (req, res) => {
   res.send("server is live");
 });
 
+// Health check endpoint for monitoring
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Catch-all for debugging - log any other requests
 app.use((req, res) => {
   console.log(`❓ Unknown request: ${req.method} ${req.path}`);
@@ -93,6 +102,8 @@ app.use((req, res) => {
 });
 
 const port = process.env.PORT || 5000;
-app.listen(port, () =>
-  console.log("Server is running on Port:", port)
+const host = process.env.HOST || '0.0.0.0'; // Bind to 0.0.0.0 to accept external connections
+
+app.listen(port, host, () =>
+  console.log(`Server is running on ${host}:${port}`)
 );
