@@ -121,10 +121,11 @@ Date – extract date in YYYY-MM-DD format (MySQL DATE format). CRITICAL DATE PA
    - "09/11" = 9th November (NOT 11th September)
    - "15/12" = 15th December (NOT 12th January)
    - "28/11" = 28th November
-2. Dates MUST always be in the future. Players don't post games that are already in the past.
-3. If a calculated date would be in the past based on the current date, automatically use the next year.
-4. Think logically: If today is 27th November 2025 and you see "09/11", that would be 9th November 2025 which is in the past, so use 9th November 2026 instead.
-5. Always validate that the extracted date is in the future before returning it.
+2. The match date must be ON OR AFTER the "current date" given later in this prompt (Singapore). Never return a date before that day.
+3. Pick the EARLIEST valid date that fits the message — do not jump an extra year "to be safe". Example: if current date is 5 April 2026 and the post implies 10 November, use 2026-11-10, NOT 2027-11-10.
+4. Year rule: For month/day from the message, first try the current calendar year from context. Only if that full date would be BEFORE the current date, use the following year — never skip two years ahead unless the message explicitly names a year (e.g. "2028").
+5. Do not invent far-future years. If the message has no year, the output year must be either the context current year or exactly one year after it — not +2, +3, etc.
+6. Relative phrases ("tomorrow", "this Sunday", "next week"): compute the real calendar date from the given current date; do not default those to next calendar year.
 Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
 Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". IMPORTANT: 
 - Valid formats: "3v3", "5v5", "7v7", "11v11", "pickup game", or null if unclear
@@ -175,7 +176,7 @@ If the relevant data cannot be parsed, default answer can be "DM to clarify".
 For location (Singapore-specific): Expand all abbreviations (Sec → Secondary School, Pri → Primary School, Jln → Jalan, Lor → Lorong, etc.) and use proper capitalization following Singapore naming conventions (Title Case for place names: "North side" → "North Side", "Paya lebar" → "Paya Lebar", "East coast" → "East Coast").
 Use 24-hour format for time in HH:MM:SS format (e.g., "13:00:00" for 1pm, "18:30:00" for 6:30pm).
 Use YYYY-MM-DD format for date (e.g., "2025-10-27" for 27th October 2025).
-For numeric dates, ALWAYS use DD/MM format: "09/11" = 9th November (NOT 11th September). If the calculated date is in the past, automatically use next year - players don't post games that have already happened.
+For numeric dates, ALWAYS use DD/MM format: "09/11" = 9th November (NOT 11th September). If that month/day is already before the given current date in the current year, use the same month/day in the next year only — never add extra years. Prefer the nearest upcoming date, not the farthest.
 Use requirement field to indicate what the post is looking for: "Players" (default), "Goalkeeper", "Opponent", "Referee", or "Pitch". For football-related posts, requirement should NEVER be null - always default to "Players" if the message doesn't explicitly state otherwise.
 Use otherDetails for any extra info like match duration, equipment provided, special rules, etc.
 Always provide a confidence score (0–1) indicating how sure you are that the extracted information is correct.
@@ -199,17 +200,16 @@ messageQueue.process("parse-message", async (job) => {
   );
 
   try {
-    // Get current date in Singapore timezone
+    // Singapore calendar date (avoid new Date(toLocaleString) + toISOString — wrong on many servers)
     const now = new Date();
-    const singaporeDate = new Date(
-      now.toLocaleString("en-US", { timeZone: "Asia/Singapore" })
-    );
-    const currentDate = singaporeDate.toISOString().split("T")[0]; // YYYY-MM-DD format
-    const currentDay = singaporeDate.toLocaleDateString("en-US", {
+    const currentDate = now.toLocaleDateString("en-CA", {
+      timeZone: "Asia/Singapore",
+    }); // YYYY-MM-DD
+    const currentDay = now.toLocaleDateString("en-US", {
       weekday: "long",
       timeZone: "Asia/Singapore",
     });
-    const currentYear = singaporeDate.getFullYear();
+    const currentYear = Number(currentDate.slice(0, 4));
 
     // Build context-aware prompt
     const contextualPrompt = `${FOOTBALL_EXTRACTION_PROMPT}
@@ -219,17 +219,17 @@ IMPORTANT DATE CONTEXT:
 - Current year: ${currentYear}
 - Timezone: Singapore (SGT, UTC+8)
 
-CRITICAL DATE PARSING RULES:
+CRITICAL DATE PARSING RULES (Singapore, current date = ${currentDate}):
 1. For numeric dates (e.g., "09/11", "28/11"), ALWAYS use DD/MM format (day/month), NOT MM/DD.
    - Example: "09/11" = 9th November, NOT 11th September
    - Example: "28/11" = 28th November
-2. Dates MUST be in the future. If a date would be in the past, automatically use next year (${currentYear + 1}).
-3. Logic check: Compare the extracted date with current date ${currentDate}. If extracted date < current date, add 1 year.
-4. When the message says "this Sunday", "tomorrow", "next week", calculate the actual date based on the current date above.
-5. If only day of week is mentioned (e.g., "Sunday"), assume it's the next occurrence of that day from the current date.
+2. Output date must be >= ${currentDate}. Do NOT pick a year beyond ${currentYear + 1} unless the message explicitly states that later year.
+3. Smallest-year rule: For month/day from the message, use year ${currentYear} if that gives a date >= ${currentDate}; otherwise use ${currentYear + 1}. Never use ${currentYear + 2} or later without an explicit year in the message.
+4. "Tomorrow", "this Sunday", "next week": compute from ${currentDate} — do not shift to next calendar year unless the computed day is still before ${currentDate}.
+5. If only a weekday is given (e.g. "Sunday"), use the next occurrence of that weekday on or after ${currentDate}.
 6. ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format).
 7. ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
-8. NEVER return a date that is in the past - players don't post games that have already happened. 
+8. Do not output arbitrary far-future dates; stay as close to the message meaning as possible while keeping the date >= ${currentDate}.
 
 Message to analyze: ${message}`;
 
@@ -242,7 +242,7 @@ Message to analyze: ${message}`;
         {
           role: "system",
           content:
-            "You are a football match data extraction AI. Extract structured information from football-related messages and return only valid JSON. You have access to the current date and should correctly interpret relative dates like 'tomorrow', 'this Sunday', etc.",
+            "You are a football match data extraction AI. Extract structured information from football-related messages and return only valid JSON. Use the provided current date in Asia/Singapore. Choose the nearest upcoming match date that fits the text — avoid extra future years unless the message clearly states them.",
         },
         {
           role: "user",
@@ -257,20 +257,19 @@ Message to analyze: ${message}`;
 
     const extractedData = JSON.parse(completion.choices[0].message.content);
     
-    // Validate and fix date if it's in the past
+    // If model returned a date before Singapore today, bump year (string YYYY-MM-DD, minimal bumps)
     if (extractedData.date && extractedData.confidence > 0) {
-      const extractedDate = new Date(extractedData.date);
-      const today = new Date(currentDate);
-      today.setHours(0, 0, 0, 0);
-      extractedDate.setHours(0, 0, 0, 0);
-      
-      if (extractedDate < today) {
-        // Date is in the past, add one year
-        const nextYear = extractedDate.getFullYear() + 1;
-        extractedDate.setFullYear(nextYear);
-        const newDateStr = extractedDate.toISOString().split('T')[0];
-        logger.info(`🔄 [Job ${job.id}] Date ${extractedData.date} was in the past, adjusted to ${newDateStr}`);
-        extractedData.date = newDateStr;
+      const ymd = String(extractedData.date).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(ymd) && ymd < currentDate) {
+        let bumped = ymd;
+        for (let i = 0; i < 4 && bumped < currentDate; i += 1) {
+          const [y, m, d] = bumped.split("-").map(Number);
+          bumped = `${y + 1}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        }
+        logger.info(
+          `🔄 [Job ${job.id}] Date ${extractedData.date} was before ${currentDate}, adjusted to ${bumped}`
+        );
+        extractedData.date = bumped;
       }
     }
     
