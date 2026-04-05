@@ -464,26 +464,12 @@ app.post("/parse", async (req, res) => {
 app.get("/delete-expired-matches", async (req, res) => {
   try {
     let totalDeleted = 0;
-
+    
+    // 1. Delete expired matches
     // Use Singapore timezone (UTC+8) for date/time comparisons
+    // Set session timezone to Singapore (UTC+8) for accurate comparisons
     await dbPool.execute("SET time_zone = '+08:00'");
-
-    // 1. Next-calendar-year dates → current year (keep month/day; replace year only)
-    const fixNextYearQuery = `
-            UPDATE football_matches
-            SET date = STR_TO_DATE(
-              CONCAT(YEAR(CURDATE()), '-', MONTH(date), '-', DAY(date)),
-              '%Y-%c-%e'
-            )
-            WHERE date IS NOT NULL
-            AND YEAR(date) = YEAR(CURDATE()) + 1
-            `;
-    const [fixNextYearResult] = await dbPool.execute(fixNextYearQuery);
-    logger.info(
-      `📅 Corrected ${fixNextYearResult.affectedRows} match dates from next year to current year`
-    );
-
-    // 2. Delete expired matches
+    
     const expiredQuery = `
             DELETE FROM football_matches
             WHERE date IS NOT NULL 
@@ -500,7 +486,7 @@ app.get("/delete-expired-matches", async (req, res) => {
     totalDeleted += expiredResult.affectedRows;
     logger.info(`🗑️ Deleted ${expiredResult.affectedRows} expired matches`);
     
-    // 3. Delete duplicates based on date + time + location combination (priority 1)
+    // 2. Delete duplicates based on date + time + location combination (priority 1)
     // If date, time, and location are all the same, delete duplicates
     const duplicateLocationQuery = `
             DELETE fm1 FROM football_matches fm1
@@ -520,7 +506,7 @@ app.get("/delete-expired-matches", async (req, res) => {
     totalDeleted += duplicateLocationResult.affectedRows;
     logger.info(`🗑️ Deleted ${duplicateLocationResult.affectedRows} duplicate matches (same date + time + location)`);
     
-    // 4. Delete duplicates based on original_message (priority 2)
+    // 3. Delete duplicates based on original_message (priority 2)
     // Only if date+time+location don't match, check if original message is the same
     const duplicateMessageQuery = `
             DELETE fm1 FROM football_matches fm1
@@ -548,7 +534,6 @@ app.get("/delete-expired-matches", async (req, res) => {
       message: "Expired and duplicate matches deleted successfully",
       deleted: totalDeleted,
       breakdown: {
-        yearCorrected: fixNextYearResult.affectedRows,
         expired: expiredResult.affectedRows,
         duplicateMessage: duplicateMessageResult.affectedRows,
         duplicateLocation: duplicateLocationResult.affectedRows
