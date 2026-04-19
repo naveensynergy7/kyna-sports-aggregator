@@ -82,6 +82,22 @@ const messageSchema = Joi.object({
   contactUrl: Joi.string().uri().optional(),
 });
 
+/**
+ * Model often picks year = currentYear+1 ("to be safe"). For "18 Apr …" we only need
+ * the next occurrence of that month/day on or after Singapore today → this year OR next,
+ * never an extra leap (e.g. 2027 when 2026-04-18 is still upcoming).
+ */
+function snapDateToNextMonthDayOccurrence(ymd, currentDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
+  const [, mo, da] = ymd.split("-");
+  const cy = Number(currentDate.slice(0, 4));
+  const month = mo.padStart(2, "0");
+  const day = da.padStart(2, "0");
+  const thisYear = `${cy}-${month}-${day}`;
+  if (thisYear >= currentDate) return thisYear;
+  return `${cy + 1}-${month}-${day}`;
+}
+
 // OpenAI prompt for extracting football match data
 const FOOTBALL_EXTRACTION_PROMPT = `
 You are a football match data extraction AI. Extract structured information from football-related messages.
@@ -126,6 +142,7 @@ Date – extract date in YYYY-MM-DD format (MySQL DATE format). CRITICAL DATE PA
 4. Year rule: For month/day from the message, first try the current calendar year from context. Only if that full date would be BEFORE the current date, use the following year — never skip two years ahead unless the message explicitly names a year (e.g. "2028").
 5. Do not invent far-future years. If the message has no year, the output year must be either the context current year or exactly one year after it — not +2, +3, etc.
 6. Relative phrases ("tomorrow", "this Sunday", "next week"): compute the real calendar date from the given current date; do not default those to next calendar year.
+7. Day + month without a year (e.g. "18 Apr", "Apr 18"): use the NEXT occurrence of that calendar day on or after the current date. That means year = current year if that date is still ahead, else year = current year + 1 only — never +2 (e.g. do not use 2027 for "18 Apr" when 18 Apr this year is still in the future).
 Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
 Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". IMPORTANT: 
 - Valid formats: "3v3", "5v5", "7v7", "11v11", "pickup game", or null if unclear
@@ -230,6 +247,7 @@ CRITICAL DATE PARSING RULES (Singapore, current date = ${currentDate}):
 6. ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format).
 7. ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
 8. Do not output arbitrary far-future dates; stay as close to the message meaning as possible while keeping the date >= ${currentDate}.
+9. For "DD Mon" or "Mon DD" style without an explicit four-digit year, the year must be either ${currentYear} or ${currentYear + 1}, chosen by the next-occurring date rule — not a later year.
 
 Message to analyze: ${message}`;
 
@@ -272,7 +290,21 @@ Message to analyze: ${message}`;
         extractedData.date = bumped;
       }
     }
-    
+
+    // Fix model picking year+1 when same month/day in current year is still >= today (e.g. 18 Apr → 2026 not 2027)
+    if (extractedData.date && extractedData.confidence > 0) {
+      const ymd = String(extractedData.date).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+        const snapped = snapDateToNextMonthDayOccurrence(ymd, currentDate);
+        if (snapped !== ymd) {
+          logger.info(
+            `🔄 [Job ${job.id}] Date year normalized: ${ymd} → ${snapped} (next occurrence vs ${currentDate})`
+          );
+          extractedData.date = snapped;
+        }
+      }
+    }
+
     // Default requirement to "Players" if null/empty for football-related posts
     // Valid categories: "Players", "Goalkeeper", "Opponent", "Referee", "Pitch"
     if (extractedData.confidence > 0 && (!extractedData.requirement || extractedData.requirement === null || extractedData.requirement.trim() === "")) {
