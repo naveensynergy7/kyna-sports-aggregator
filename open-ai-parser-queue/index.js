@@ -82,10 +82,20 @@ const messageSchema = Joi.object({
   contactUrl: Joi.string().uri().optional(),
 });
 
+/** Model may return "2027-4-18", datetime ISO, etc. → canonical YYYY-MM-DD or null */
+function extractIsoDateOnly(value) {
+  if (value == null || value === "") return null;
+  const s = String(value).trim();
+  const m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  const mo = String(Number(m[2])).padStart(2, "0");
+  const da = String(Number(m[3])).padStart(2, "0");
+  return `${m[1]}-${mo}-${da}`;
+}
+
 /**
- * Model often picks year = currentYear+1 ("to be safe"). For "18 Apr …" we only need
- * the next occurrence of that month/day on or after Singapore today → this year OR next,
- * never an extra leap (e.g. 2027 when 2026-04-18 is still upcoming).
+ * From the model's month/day only: next calendar occurrence on or after Singapore today.
+ * Fixes spurious 2027 when this year's date is still upcoming (e.g. 18 Apr).
  */
 function snapDateToNextMonthDayOccurrence(ymd, currentDate) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
@@ -96,6 +106,16 @@ function snapDateToNextMonthDayOccurrence(ymd, currentDate) {
   const thisYear = `${cy}-${month}-${day}`;
   if (thisYear >= currentDate) return thisYear;
   return `${cy + 1}-${month}-${day}`;
+}
+
+/** If snap ever lands before today (edge cases), bump year until >= currentDate */
+function bumpYearUntilOnOrAfter(ymd, currentDate) {
+  let y = ymd;
+  for (let i = 0; i < 5 && y < currentDate; i += 1) {
+    const [yr, m, d] = y.split("-").map(Number);
+    y = `${yr + 1}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  return y;
 }
 
 // OpenAI prompt for extracting football match data
@@ -274,34 +294,19 @@ Message to analyze: ${message}`;
     logger.info(`✅ [Job ${job.id}] OpenAI API response received`);
 
     const extractedData = JSON.parse(completion.choices[0].message.content);
-    
-    // If model returned a date before Singapore today, bump year (string YYYY-MM-DD, minimal bumps)
-    if (extractedData.date && extractedData.confidence > 0) {
-      const ymd = String(extractedData.date).trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(ymd) && ymd < currentDate) {
-        let bumped = ymd;
-        for (let i = 0; i < 4 && bumped < currentDate; i += 1) {
-          const [y, m, d] = bumped.split("-").map(Number);
-          bumped = `${y + 1}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        }
-        logger.info(
-          `🔄 [Job ${job.id}] Date ${extractedData.date} was before ${currentDate}, adjusted to ${bumped}`
-        );
-        extractedData.date = bumped;
-      }
-    }
 
-    // Fix model picking year+1 when same month/day in current year is still >= today (e.g. 18 Apr → 2026 not 2027)
-    if (extractedData.date && extractedData.confidence > 0) {
-      const ymd = String(extractedData.date).trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
-        const snapped = snapDateToNextMonthDayOccurrence(ymd, currentDate);
-        if (snapped !== ymd) {
-          logger.info(
-            `🔄 [Job ${job.id}] Date year normalized: ${ymd} → ${snapped} (next occurrence vs ${currentDate})`
-          );
-          extractedData.date = snapped;
-        }
+    // Date: ignore model's year when possible — use month/day + next occurrence vs Singapore today.
+    // (Strict YYYY-MM-DD regex skipped unpadded dates like 2027-4-18 so snap never ran → 2027 stuck.)
+    if (extractedData.date != null && String(extractedData.date).trim() !== "") {
+      const raw = String(extractedData.date).trim();
+      const canon = extractIsoDateOnly(raw);
+      if (canon) {
+        const snapped = snapDateToNextMonthDayOccurrence(canon, currentDate);
+        const finalYmd = bumpYearUntilOnOrAfter(snapped, currentDate);
+        extractedData.date = finalYmd;
+        logger.info(
+          `📅 [Job ${job.id}] Date pipeline: raw=${raw} canon=${canon} → ${finalYmd} (Singapore today=${currentDate})`
+        );
       }
     }
 
