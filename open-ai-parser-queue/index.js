@@ -152,17 +152,11 @@ Location/Venue – where the match will take place. CRITICAL LOCATION FORMATTING
    - "Woodlands" → "Woodlands"
    - Capitalize all significant words in location names following Singapore naming conventions
 3. Keep the full address/venue name as provided, but ensure abbreviations are expanded and capitalization follows Singapore standards.
-Date – extract date in YYYY-MM-DD format (MySQL DATE format). CRITICAL DATE PARSING RULES:
-1. For numeric dates (e.g., "09/11", "15/12"), ALWAYS interpret as DD/MM format (day/month), NOT MM/DD. This is the standard format in Singapore.
-   - "09/11" = 9th November (NOT 11th September)
-   - "15/12" = 15th December (NOT 12th January)
-   - "28/11" = 28th November
-2. The match date must be ON OR AFTER the "current date" given later in this prompt (Singapore). Never return a date before that day.
-3. Pick the EARLIEST valid date that fits the message — do not jump an extra year "to be safe". Example: if current date is 5 April 2026 and the post implies 10 November, use 2026-11-10, NOT 2027-11-10.
-4. Year rule: For month/day from the message, first try the current calendar year from context. Only if that full date would be BEFORE the current date, use the following year — never skip two years ahead unless the message explicitly names a year (e.g. "2028").
-5. Do not invent far-future years. If the message has no year, the output year must be either the context current year or exactly one year after it — not +2, +3, etc.
-6. Relative phrases ("tomorrow", "this Sunday", "next week"): compute the real calendar date from the given current date; do not default those to next calendar year.
-7. Day + month without a year (e.g. "18 Apr", "Apr 18"): use the NEXT occurrence of that calendar day on or after the current date. That means year = current year if that date is still ahead, else year = current year + 1 only — never +2 (e.g. do not use 2027 for "18 Apr" when 18 Apr this year is still in the future).
+Date – YYYY-MM-DD (Singapore). Short rules:
+1. Numeric dates (e.g. 09/11, 15/12) = DD/MM, not US MM/DD.
+2. Must be on or after CURRENT DATE given later — never a past day.
+3. Month+day without a year (e.g. "18 Apr"): next calendar occurrence on or after CURRENT DATE — use this year if that day is still ahead, else next year only (no +2 years unless the message states a year like 2028).
+4. "Tomorrow", weekday only, "next week": compute from CURRENT DATE below.
 Time – extract time in HH:MM:SS format, 24-hour format (MySQL TIME format)
 Game Type – e.g., "5v5", "7v7", "11v11", "3v3", "pickup game". IMPORTANT: 
 - Valid formats: "3v3", "5v5", "7v7", "11v11", "pickup game", or null if unclear
@@ -212,8 +206,7 @@ Always expand game type to a clear descriptive format if teams and number of pla
 If the relevant data cannot be parsed, default answer can be "DM to clarify".
 For location (Singapore-specific): Expand all abbreviations (Sec → Secondary School, Pri → Primary School, Jln → Jalan, Lor → Lorong, etc.) and use proper capitalization following Singapore naming conventions (Title Case for place names: "North side" → "North Side", "Paya lebar" → "Paya Lebar", "East coast" → "East Coast").
 Use 24-hour format for time in HH:MM:SS format (e.g., "13:00:00" for 1pm, "18:30:00" for 6:30pm).
-Use YYYY-MM-DD format for date (e.g., "2025-10-27" for 27th October 2025).
-For numeric dates, ALWAYS use DD/MM format: "09/11" = 9th November (NOT 11th September). If that month/day is already before the given current date in the current year, use the same month/day in the next year only — never add extra years. Prefer the nearest upcoming date, not the farthest.
+Use YYYY-MM-DD for date; follow the Date rules and CURRENT DATE below.
 Use requirement field to indicate what the post is looking for: "Players" (default), "Goalkeeper", "Opponent", "Referee", or "Pitch". For football-related posts, requirement should NEVER be null - always default to "Players" if the message doesn't explicitly state otherwise.
 Use otherDetails for any extra info like match duration, equipment provided, special rules, etc.
 Always provide a confidence score (0–1) indicating how sure you are that the extracted information is correct.
@@ -248,26 +241,10 @@ messageQueue.process("parse-message", async (job) => {
     });
     const currentYear = Number(currentDate.slice(0, 4));
 
-    // Build context-aware prompt
     const contextualPrompt = `${FOOTBALL_EXTRACTION_PROMPT}
 
-IMPORTANT DATE CONTEXT:
-- Current date: ${currentDate} (${currentDay})
-- Current year: ${currentYear}
-- Timezone: Singapore (SGT, UTC+8)
-
-CRITICAL DATE PARSING RULES (Singapore, current date = ${currentDate}):
-1. For numeric dates (e.g., "09/11", "28/11"), ALWAYS use DD/MM format (day/month), NOT MM/DD.
-   - Example: "09/11" = 9th November, NOT 11th September
-   - Example: "28/11" = 28th November
-2. Output date must be >= ${currentDate}. Do NOT pick a year beyond ${currentYear + 1} unless the message explicitly states that later year.
-3. Smallest-year rule: For month/day from the message, use year ${currentYear} if that gives a date >= ${currentDate}; otherwise use ${currentYear + 1}. Never use ${currentYear + 2} or later without an explicit year in the message.
-4. "Tomorrow", "this Sunday", "next week": compute from ${currentDate} — do not shift to next calendar year unless the computed day is still before ${currentDate}.
-5. If only a weekday is given (e.g. "Sunday"), use the next occurrence of that weekday on or after ${currentDate}.
-6. ALWAYS return dates in YYYY-MM-DD format (MySQL DATE format).
-7. ALWAYS return time in HH:MM:SS format (e.g., "13:00:00" for 1pm).
-8. Do not output arbitrary far-future dates; stay as close to the message meaning as possible while keeping the date >= ${currentDate}.
-9. For "DD Mon" or "Mon DD" style without an explicit four-digit year, the year must be either ${currentYear} or ${currentYear + 1}, chosen by the next-occurring date rule — not a later year.
+CURRENT DATE (Singapore): ${currentDate} (${currentDay}), year ${currentYear}.
+Your JSON date must be >= ${currentDate}. Prefer year ${currentYear} when that month/day is still on or after ${currentDate}; otherwise ${currentYear + 1}. Only use a later year if the message explicitly names it.
 
 Message to analyze: ${message}`;
 
