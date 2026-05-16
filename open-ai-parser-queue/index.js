@@ -5,6 +5,7 @@ const OpenAI = require("openai");
 const mysql = require("mysql2/promise");
 const Joi = require("joi");
 const winston = require("winston");
+const { saveParsedMessageToSheet } = require("./lib/googleSheets");
 require("dotenv").config();
 
 // Initialize Winston logger
@@ -296,14 +297,27 @@ Message to analyze: ${message}`;
     
     logger.info(`📊 [Job ${job.id}] Extracted data:`, { extractedData });
 
-    // Save to database
-    logger.info(`💾 [Job ${job.id}] Saving to database...`);
-    await saveParsedMessage({
+    const parsedPayload = {
       originalMessage: message,
       platform,
       contactUrl,
       extractedData,
-    });
+    };
+
+    // Save to database
+    logger.info(`💾 [Job ${job.id}] Saving to database...`);
+    await saveParsedMessage(parsedPayload);
+
+    // Save to Google Sheets (non-blocking on failure)
+    try {
+      logger.info(`📊 [Job ${job.id}] Saving to Google Sheets...`);
+      await saveParsedMessageToSheet(parsedPayload, logger);
+    } catch (sheetError) {
+      logger.error(`❌ [Job ${job.id}] Google Sheets save failed:`, {
+        error: sheetError.message,
+        stack: sheetError.stack,
+      });
+    }
 
     logger.info(`🎉 [Job ${job.id}] Successfully processed and saved!`);
     return { success: true };
