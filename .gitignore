@@ -45,6 +45,9 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
+# Google service account keys (copy from googlesheets.json.example)
+open-ai-parser-queue/googlesheets.json
+
 # dotenv environment variables file
 .env
 .env.test
