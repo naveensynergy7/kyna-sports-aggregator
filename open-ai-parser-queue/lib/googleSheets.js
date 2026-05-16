@@ -73,8 +73,18 @@ function getSpreadsheetId() {
   return id;
 }
 
-function getSheetRange() {
-  return process.env.GOOGLE_SHEETS_RANGE || "Sheet1";
+// Tab name only (e.g. "games"). Legacy "games!A:Z" is supported — columns are always A:O.
+function getSheetTab() {
+  const value = (process.env.GOOGLE_SHEETS_RANGE || "Sheet1").trim();
+  return value.includes("!") ? value.split("!")[0].trim() : value;
+}
+
+function getHeaderRange() {
+  return `${getSheetTab()}!A1:O1`;
+}
+
+function getAppendRange() {
+  return `${getSheetTab()}!A:O`;
 }
 
 async function ensureHeaders(logger) {
@@ -82,7 +92,7 @@ async function ensureHeaders(logger) {
 
   const sheets = getSheetsClient();
   const spreadsheetId = getSpreadsheetId();
-  const range = `${getSheetRange()}!A1:O1`;
+  const range = getHeaderRange();
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
@@ -151,7 +161,7 @@ async function saveParsedMessageToSheet(data, logger) {
   ];
 
   const sheets = getSheetsClient();
-  const range = `${getSheetRange()}!A:O`;
+  const range = getAppendRange();
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSpreadsheetId(),
